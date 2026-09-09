@@ -5,92 +5,115 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Monitoreo Acústico - Neiva</title>
   
-  <!-- Tailwind CSS para diseño -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Leaflet CSS y JS (Mapa) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
-  <!-- Chart.js para Gráficas -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-  <!-- Header / Barra Superior -->
-  <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg">
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-50">
     <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
       <div class="flex items-center gap-3">
-        <div class="p-2 bg-indigo-600 rounded-lg">
+        <div class="p-2.5 bg-indigo-600 rounded-xl shadow-inner">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/>
           </svg>
         </div>
         <div>
-          <h1 class="text-xl font-bold">Red de Monitoreo Acústico</h1>
-          <p class="text-xs text-slate-400">Nodo 1: Neiva, Huila</p>
+          <h1 class="text-xl font-bold tracking-tight">Red de Monitoreo Acústico</h1>
+          <p class="text-xs text-slate-400">Estación 01 — Tecnoparque / Neiva, Huila</p>
         </div>
       </div>
+      
       <div class="flex items-center gap-3">
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Conectado a Firebase
+        <!-- Badge Estado Nodo -->
+        <span id="badge-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600 transition-colors">
+          <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="texto-estado">Conectando...</span>
         </span>
-        <button onclick="descargarCSV()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1">
+
+        <button onclick="descargarCSV()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition flex items-center gap-1.5">
           📥 Exportar CSV
         </button>
       </div>
     </div>
   </header>
 
-  <!-- Contenido Principal -->
+  <!-- Principal -->
   <main class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Tarjeta 1: Medidor en Tiempo Real -->
-    <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 flex flex-col justify-between shadow-md">
+    <!-- Tarjeta Lectura Instantánea -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
       <div>
-        <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-2">Tiempo Real (2s)</h2>
-        <div class="flex items-baseline gap-2">
-          <span id="val-laeq1s" class="text-5xl font-extrabold text-indigo-400">--.-</span>
-          <span class="text-xl font-medium text-slate-400">dBA</span>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tiempo Real (2s)</h2>
+          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
         </div>
-        <p class="text-xs text-slate-400 mt-1">Nivel equivalente instantáneo ($L_{Aeq,1s}$)</p>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
+          <span class="text-2xl font-bold text-slate-400">dBA</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo ($L_{Aeq,1s}$)</p>
       </div>
 
-      <div class="mt-6 pt-4 border-t border-slate-700/60 grid grid-cols-2 gap-4">
+      <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-2 gap-4">
         <div>
-          <span class="text-xs text-slate-400 block">Ponderación C ($L_{Ceq,1s}$)</span>
-          <span id="val-lceq1s" class="text-lg font-bold text-slate-200">--.- dBC</span>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
+          <span id="val-lceq1s" class="text-base font-bold text-slate-200">--.- dBC</span>
         </div>
         <div>
-          <span class="text-xs text-slate-400 block">Último Minuto ($L_{Aeq,1min}$)</span>
-          <span id="val-laeq1min" class="text-lg font-bold text-emerald-400">--.- dBA</span>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Último Minuto</span>
+          <span id="val-laeq1min" class="text-base font-bold text-emerald-400">--.- dBA</span>
         </div>
       </div>
     </div>
 
-    <!-- Tarjeta 2: Mapa de Ubicación del Nodo -->
-    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-md flex flex-col">
-      <h2 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-3">Ubicación del Estación</h2>
-      <div id="mapa" class="w-full h-48 sm:h-56 rounded-lg border border-slate-700"></div>
+    <!-- Mapa -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-3 px-1">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
+        <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+      </div>
+      <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
     </div>
 
-    <!-- Tarjeta 3: Gráfica Histórica -->
-    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-md">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+    <!-- Tarjetas de Métricas del Día -->
+    <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Mínimo Registrado</span>
+        <span id="stat-min" class="text-2xl font-bold text-sky-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Promedio Integrado</span>
+        <span id="stat-avg" class="text-2xl font-bold text-indigo-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Máximo Registrado</span>
+        <span id="stat-max" class="text-2xl font-bold text-rose-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Total Muestras (1min)</span>
+        <span id="stat-count" class="text-2xl font-bold text-emerald-400 mt-1 block">0</span>
+      </div>
+    </div>
+
+    <!-- Gráfica Histórica -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
-          <h2 class="text-base font-bold text-slate-100">Evolución Temporal del Ruido ($L_{Aeq,1min}$)</h2>
-          <p class="text-xs text-slate-400">Histórico de mediciones integradas por minuto</p>
+          <h2 class="text-base font-bold text-slate-100">Evolución Temporal del Ruido Ambient</h2>
+          <p class="text-xs text-slate-400">Registro histórico continuo ($L_{Aeq,1min}$ vs $L_{Amax,1min}$)</p>
         </div>
       </div>
-      <div class="relative h-72 sm:h-80 w-full">
+      <div class="relative h-80 w-full">
         <canvas id="graficaAcustica"></canvas>
       </div>
     </div>
 
   </main>
 
-  <!-- Lógica de Conexión y Gráficas -->
   <script>
     const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
     const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
@@ -98,20 +121,19 @@
     let mapa, marcador;
     let chartHistorial;
     let datosHistorialGlobal = [];
+    let ultimaRespuestaTime = 0;
 
-    // 1. Inicializar Mapa Leaflet
     function initMap(lat = 2.865666, lng = -75.216591) {
-      mapa = L.map('mapa').setView([lat, lng], 15);
+      mapa = L.map('mapa', { zoomControl: false }).setView([lat, lng], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
       }).addTo(mapa);
 
       marcador = L.marker([lat, lng]).addTo(mapa)
-        .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa de Monitoreo.')
+        .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa.')
         .openPopup();
     }
 
-    // 2. Inicializar Gráfica Chart.js
     function initChart() {
       const ctx = document.getElementById('graficaAcustica').getContext('2d');
       chartHistorial = new Chart(ctx, {
@@ -123,18 +145,20 @@
               label: 'LAeq (1 min) [dBA]',
               data: [],
               borderColor: '#818cf8',
-              backgroundColor: 'rgba(129, 140, 248, 0.1)',
+              backgroundColor: 'rgba(129, 140, 248, 0.12)',
               borderWidth: 2,
               fill: true,
-              tension: 0.3
+              pointRadius: 1,
+              tension: 0.2
             },
             {
               label: 'LAmax (1 min) [dBA]',
               data: [],
-              borderColor: '#f87171',
+              borderColor: '#fb7185',
               borderWidth: 1.5,
-              borderDash: [4, 4],
+              borderDash: [3, 3],
               fill: false,
+              pointRadius: 0,
               tension: 0.2
             }
           ]
@@ -145,41 +169,62 @@
           scales: {
             x: {
               grid: { color: '#334155' },
-              ticks: { color: '#94a3b8', maxTicksLimit: 10 }
+              ticks: { color: '#94a3b8', maxTicksLimit: 12, font: { size: 10 } }
             },
             y: {
               grid: { color: '#334155' },
-              ticks: { color: '#94a3b8' },
-              suggestedMin: 40,
-              suggestedMax: 90
+              ticks: { color: '#94a3b8', font: { size: 11 } },
+              suggestedMin: 35,
+              suggestedMax: 85
             }
           },
           plugins: {
-            legend: { labels: { color: '#e2e8f0' } }
+            legend: { labels: { color: '#e2e8f0', font: { size: 12 } } }
           }
         }
       });
     }
 
-    // 3. Consultar datos en Tiempo Real
     async function obtenerActual() {
       try {
         const res = await fetch(URL_ACTUAL);
         const data = await res.json();
-        if (data) {
-          document.getElementById('val-laeq1s').innerText = data.LAeq_1s ? data.LAeq_1s.toFixed(1) : '--.-';
-          document.getElementById('val-lceq1s').innerText = data.LCeq_1s ? `${data.LCeq_1s.toFixed(1)} dBC` : '--.- dBC';
+        if (data && data.LAeq_1s !== undefined) {
+          document.getElementById('val-laeq1s').innerText = data.LAeq_1s.toFixed(1);
+          document.getElementById('val-lceq1s').innerText = `${data.LCeq_1s.toFixed(1)} dBC`;
           
           if (data.lat && data.lng && marcador) {
             marcador.setLatLng([data.lat, data.lng]);
+            document.getElementById('coords-text').innerText = `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
           }
+
+          actualizarBadgeEstado(true);
+          ultimaRespuestaTime = Date.now();
         }
       } catch (err) {
-        console.error("Error leyendo tiempo real:", err);
+        console.error("Error tiempo real:", err);
+        if (Date.now() - ultimaRespuestaTime > 8000) {
+          actualizarBadgeEstado(false);
+        }
       }
     }
 
-    // 4. Consultar Histórico
+    function actualizarBadgeEstado(activo) {
+      const badge = document.getElementById('badge-estado');
+      const dot = document.getElementById('dot-estado');
+      const texto = document.getElementById('texto-estado');
+
+      if (activo) {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        texto.innerText = "Nodo en Línea";
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        texto.innerText = "Sin Conexión";
+      }
+    }
+
     async function obtenerHistorial() {
       try {
         const res = await fetch(URL_HISTORIAL);
@@ -193,8 +238,7 @@
 
         Object.keys(data).forEach(key => {
           const item = data[key];
-          if (item.timestamp) {
-            // Convertir Timestamp UNIX a Hora Local
+          if (item.timestamp && item.timestamp > 0) {
             const fecha = new Date(item.timestamp * 1000);
             const horaFormateada = fecha.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
@@ -211,26 +255,34 @@
           }
         });
 
-        // Actualizar último valor de 1 min en tarjeta
         if (laeqData.length > 0) {
           document.getElementById('val-laeq1min').innerText = `${laeqData[laeqData.length - 1].toFixed(1)} dBA`;
+          
+          // Calcular estadísticas
+          const minVal = Math.min(...laeqData);
+          const maxVal = Math.max(...laeqData);
+          const sumExp = laeqData.reduce((acc, val) => acc + Math.pow(10, val / 10), 0);
+          const avgVal = 10 * Math.log10(sumExp / laeqData.length);
+
+          document.getElementById('stat-min').innerText = `${minVal.toFixed(1)} dBA`;
+          document.getElementById('stat-max').innerText = `${maxVal.toFixed(1)} dBA`;
+          document.getElementById('stat-avg').innerText = `${avgVal.toFixed(1)} dBA`;
+          document.getElementById('stat-count').innerText = laeqData.length;
         }
 
-        // Actualizar gráfica
         chartHistorial.data.labels = labels;
         chartHistorial.data.datasets[0].data = laeqData;
         chartHistorial.data.datasets[1].data = lamaxData;
         chartHistorial.update();
 
       } catch (err) {
-        console.error("Error leyendo historial:", err);
+        console.error("Error historial:", err);
       }
     }
 
-    // 5. Función para Exportar CSV
     function descargarCSV() {
       if (datosHistorialGlobal.length === 0) {
-        alert("No hay datos históricos disponibles para exportar.");
+        alert("No hay datos históricos para exportar.");
         return;
       }
 
@@ -243,20 +295,18 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `reporte_acustico_neiva_${Date.now()}.csv`;
+      a.download = `monitoreo_acustico_neiva_${Date.now()}.csv`;
       a.click();
     }
 
-    // Inicialización al cargar la página
     window.onload = () => {
       initMap();
       initChart();
       
-      // Consultas periódicas
       obtenerActual();
       obtenerHistorial();
-      setInterval(obtenerActual, 2000);    // Actualiza tiempo real cada 2 segundos
-      setInterval(obtenerHistorial, 30000); // Actualiza gráfica cada 30 segundos
+      setInterval(obtenerActual, 2000);
+      setInterval(obtenerHistorial, 20000);
     };
   </script>
 </body>

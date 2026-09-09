@@ -192,6 +192,13 @@
     const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
     const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
 
+    // Configuración ajustada a la Res. 0627/2006 (Colombia)
+    // Diurno: 07:01 - 21:00 | Nocturno: 21:01 - 07:00
+    const CONFIG_HORARIOS = {
+      dia: { inicioHora: 7, inicioMin: 1, finHora: 21, finMin: 0 },
+      noche: { inicioHora: 21, inicioMin: 1, finHora: 7, finMin: 0 }
+    };
+
     let mapa, marcador;
     let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
     let datosBrutosGlobales = [];
@@ -379,7 +386,7 @@
       });
     }
 
-    // Promedio Logarítmico (Suma energética)
+    // Promedio Promedio Logarítmico (Suma energética)
     function calcularLAeqPromedio(valores) {
       const validos = valores.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 10);
       if (validos.length === 0) return null;
@@ -387,11 +394,11 @@
       return 10 * Math.log10(sumaEnergetica / validos.length);
     }
 
-    // Determina si la muestra está dentro del horario diurno (07:01 a 21:00)
+    // Función auxiliar para determinar si una muestra pertenece al período diurno
     function esHorarioDiurno(hora, minuto) {
       const minTotales = hora * 60 + minuto;
-      const inicioDiurno = 7 * 60 + 1;  // 07:01
-      const finDiurno = 21 * 60 + 0;    // 21:00
+      const inicioDiurno = 7 * 60 + 1;  // 07:01 (421 min)
+      const finDiurno = 21 * 60 + 0;    // 21:00 (1260 min)
       return minTotales >= inicioDiurno && minTotales <= finDiurno;
     }
 
@@ -448,12 +455,6 @@
           if (item.timestamp && item.timestamp > 0) {
             const fechaObj = new Date(item.timestamp * 1000);
             
-            // Extracción usando zona horaria local para corregir el desfase UTC
-            const anio = fechaObj.getFullYear();
-            const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-            const dia = String(fechaObj.getDate()).padStart(2, '0');
-            const fechaStrLocal = `${anio}-${mes}-${dia}`;
-
             const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
             const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
             const lceqVal = (item.LCeq_1min && item.LCeq_1min > 10) ? item.LCeq_1min : null;
@@ -461,7 +462,7 @@
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
-              fechaStr: fechaStrLocal,
+              fechaStr: fechaObj.toISOString().split('T')[0],
               hora: fechaObj.getHours(),
               minuto: fechaObj.getMinutes(),
               LAeq_1min: laeqVal,
@@ -587,6 +588,7 @@
       document.getElementById('val-laeq1min').innerText = `${laeqValidos[laeqValidos.length - 1].toFixed(1)} dBA`;
     }
 
+    // 2. Renderizado de Gráfica Diaria Ld / Ln
     function renderizarVistaLdLnDiaria() {
       const fechaSel = document.getElementById('filtro-fecha-ldln').value;
       if (!fechaSel) return;
@@ -611,6 +613,7 @@
       chartLdLnDiaria.update();
     }
 
+    // 3. Renderizado de Gráfica Mensual Ld / Ln
     function renderizarVistaLdLnMensual() {
       const mesSel = document.getElementById('filtro-mes-ldln').value;
       if (!mesSel) return;
@@ -651,6 +654,7 @@
       chartLdLnMensual.update();
     }
 
+    // 4. Renderizado de Gráfica Anual
     function renderizarVistaAnual() {
       const anioSel = parseInt(document.getElementById('filtro-anio').value);
       const datosMeses = Array(12).fill(null).map(() => []);

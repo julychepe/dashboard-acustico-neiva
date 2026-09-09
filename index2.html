@@ -3,150 +3,713 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard de Ruido Ambiental</title>
+  <title>Sistema de Monitoreo Acústico - Neiva</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background-color: #0f172a; color: #f8fafc; padding: 20px; }
-    .grid-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
-    .card { background-color: #1e293b; border-radius: 8px; padding: 15px; border: 1fr solid #334155; }
-    .card-title { font-size: 0.8rem; text-transform: uppercase; color: #94a3b8; font-weight: 600; margin-bottom: 8px; }
-    .card-value { font-size: 1.8rem; font-weight: bold; }
-    .text-blue { color: #38bdf8; }
-    .text-green { color: #4ade80; }
-    .text-red { color: #f87171; }
-    .chart-card { background-color: #1e293b; border-radius: 8px; padding: 20px; grid-column: span 4; }
-    .live-badge { background-color: #334155; color: #94a3b8; padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; float: right; }
-  </style>
+  <!-- Plugin para etiquetas numéricas sobre barras -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 </head>
-<body>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-  <div class="grid-container">
-    <div class="card">
-      <span class="live-badge">EN VIVO</span>
-      <div class="card-title">Tiempo Real (1min)</div>
-      <div id="laeq-actual" class="card-value text-blue">--.- dBA</div>
-      <div style="margin-top: 10px; font-size: 0.85rem;">
-        Ponderación C: <span id="lceq-actual" class="text-green">--.- dBC</span>
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-600 rounded-xl shadow-inner">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Red de Monitoreo Acústico</h1>
+          <p class="text-xs text-slate-400">Estación 01 — Tecnoparque / Neiva, Huila</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <!-- Badge Estado Nodo -->
+        <span id="badge-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600 transition-colors">
+          <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="texto-estado">Conectando...</span>
+        </span>
+
+        <button onclick="descargarCSV()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs px-3.5 py-2 rounded-lg font-medium shadow-md transition flex items-center gap-1.5">
+          📥 Exportar CSV
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Principal -->
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Tarjeta Lectura Instantánea -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tiempo Real (2s)</h2>
+          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
+        </div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
+          <span class="text-2xl font-bold text-slate-400">dBA</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo (LAeq,1s)</p>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-2 gap-4">
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
+          <span id="val-lceq1s" class="text-base font-bold text-slate-200">--.- dBC</span>
+        </div>
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Último Minuto</span>
+          <span id="val-laeq1min" class="text-base font-bold text-emerald-400">--.- dBA</span>
+        </div>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">LAeq Promedio</div>
-      <div id="laeq-promedio" class="card-value text-blue">--.- dBA</div>
+    <!-- Mapa -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-3 px-1">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
+        <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+      </div>
+      <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Mínimo / Máximo</div>
-      <div style="font-size: 1.1rem; margin-top: 5px;">
-        Mín: <span id="laeq-min" class="text-blue">--.- dBA</span><br>
-        Máx: <span id="laeq-max" class="text-red">--.- dBA</span>
+    <!-- Tarjetas de Métricas del Día -->
+    <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Mínimo Registrado</span>
+        <span id="stat-min" class="text-2xl font-bold text-sky-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">LAeq promedio</span>
+        <span id="stat-avg" class="text-2xl font-bold text-indigo-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Máximo Registrado</span>
+        <span id="stat-max" class="text-2xl font-bold text-rose-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Total Muestras (1min)</span>
+        <span id="stat-count" class="text-2xl font-bold text-emerald-400 mt-1 block">0</span>
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Total Muestras</div>
-      <div id="total-muestras" class="card-value text-green">0</div>
+    <!-- 1. GRÁFICA DE EVOLUCIÓN TEMPORAL DE RUIDO AMBIENTAL -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Evolución temporal del ruido ambiental</h2>
+          <p class="text-xs text-slate-400">Comportamiento temporal del ruido ambiental</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-400 font-medium" for="filtro-fecha-1min">Fecha:</label>
+            <input type="date" id="filtro-fecha-1min" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+            <button onclick="cambiarPeriodo1Min('1d')" id="btn-p-1d" class="text-xs px-2.5 py-1 rounded font-medium transition bg-indigo-600 text-white">1 día</button>
+            <button onclick="cambiarPeriodo1Min('7d')" id="btn-p-7d" class="text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">7 días</button>
+            <button onclick="cambiarPeriodo1Min('30d')" id="btn-p-30d" class="text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">30 días</button>
+          </div>
+        </div>
+      </div>
+      <div class="relative h-80 w-full">
+        <canvas id="graficaAcustica"></canvas>
+      </div>
     </div>
 
-    <div class="chart-card">
-      <div class="card-title">Evolución Temporal del Ruido Ambiental</div>
-      <canvas id="noiseChart" height="100"></canvas>
+    <!-- 2. GRÁFICA DIARIA Ld / Ln -->
+    <div class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Niveles día y noche</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln diarios</p>
+          </div>
+          <input type="date" id="filtro-fecha-ldln" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnDiaria"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 text-center text-xs text-slate-400 font-mono">
+        <span>Día: 07:00–19:00</span> &nbsp;|&nbsp; <span>Noche: 23:00–07:00</span>
+      </div>
     </div>
-  </div>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    <!-- 3. GRÁFICA MENSUAL DE Ld Y Ln -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Evolución mensual de Ld y Ln</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln para cada día del mes</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="month" id="filtro-mes-ldln" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnMensual"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+        <span>Valores consolidados por día de evaluación</span>
+        <span class="font-mono text-[11px]">Ld / Ln [dBA]</span>
+      </div>
+    </div>
 
-    // Reemplaza con las credenciales de tu proyecto en Firebase
-    const firebaseConfig = {
-      apiKey: "TU_API_KEY",
-      authDomain: "TU_PROYECTO.firebaseapp.com",
-      databaseURL: "https://TU_PROYECTO-default-rtdb.firebaseio.com",
-      projectId: "TU_PROYECTO"
+    <!-- 4. GRÁFICA ANUAL DE EVOLUCIÓN HISTÓRICA (PREPARADA) -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Evolución anual del ruido ambiental</h2>
+          <p class="text-xs text-slate-400">Análisis comparativo de indicadores equivalentes por mes</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400 font-medium" for="filtro-anio">Año:</label>
+          <select id="filtro-anio" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+      </div>
+      <div class="relative h-72 w-full">
+        <canvas id="graficaAnual"></canvas>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    // Configuración de Servidores Firebase
+    const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
+    const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
+
+    // Configuración Paramétrica de Horarios para Ld y Ln
+    const CONFIG_HORARIOS = {
+      dia: { inicio: 7, fin: 19 },    // 07:00 - 19:00
+      noche: { inicio: 23, fin: 7 }   // 23:00 - 07:00 (Cruza la medianoche)
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-    const ruidoRef = ref(db, "lecturas"); // Nombre exacto del nodo en Firebase
+    let mapa, marcador;
+    let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
+    let datosBrutosGlobales = []; // Guarda todos los registros de Firebase
+    let ultimaRespuestaTime = 0;
+    let modoPeriodo1Min = '1d'; // '1d', '7d', '30d'
 
-    let chartInstance = null;
+    // Registrar plugin de datalabels
+    Chart.register(ChartDataLabels);
 
-    // Escuchar datos en tiempo real
-    onValue(ruidoRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return resetUI("Sin datos en Firebase");
+    function initMap(lat = 2.865666, lng = -75.216591) {
+      mapa = L.map('mapa', { zoomControl: false }).setView([lat, lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapa);
 
-      // Filtrar y procesar claves push
-      const registros = Object.keys(data)
-        .map(key => data[key])
-        .filter(item => item && item.timestamp && item.LAeq_1min !== undefined)
-        .sort((a, b) => a.timestamp - b.timestamp);
-
-      if (registros.length === 0) return resetUI("Sin registros válidos");
-
-      actualizarUI(registros);
-    });
-
-    function actualizarUI(registros) {
-      const ultimo = registros[registros.length - 1];
-
-      // 1. Mostrar valores del último registro
-      document.getElementById("laeq-actual").innerText = `${ultimo.LAeq_1min.toFixed(1)} dBA`;
-      document.getElementById("lceq-actual").innerText = `${(ultimo.LCeq_1min || 0).toFixed(1)} dBC`;
-      document.getElementById("total-muestras").innerText = registros.length;
-
-      // 2. Mínimos, máximos y promedio logarítmico
-      const valores = registros.map(r => r.LAeq_1min);
-      document.getElementById("laeq-min").innerText = `${Math.min(...valores).toFixed(1)} dBA`;
-      document.getElementById("laeq-max").innerText = `${Math.max(...valores).toFixed(1)} dBA`;
-
-      const sumaEnergia = valores.reduce((acc, v) => acc + Math.pow(10, 0.1 * v), 0);
-      const laeqProm = 10 * Math.log10(sumaEnergia / valores.length);
-      document.getElementById("laeq-promedio").innerText = `${laeqProm.toFixed(1)} dBA`;
-
-      // 3. Generar etiquetas de tiempo (*1000)
-      const etiquetas = registros.map(r => {
-        const d = new Date(r.timestamp * 1000);
-        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      });
-
-      actualizarGrafica(etiquetas, valores);
+      marcador = L.marker([lat, lng]).addTo(mapa)
+        .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa.')
+        .openPopup();
     }
 
-    function actualizarGrafica(labels, data) {
-      const ctx = document.getElementById('noiseChart').getContext('2d');
-      if (chartInstance) chartInstance.destroy();
-
-      chartInstance = new Chart(ctx, {
+    function initCharts() {
+      // 1. Gráfica 1 Minuto / Histórica
+      const ctx1 = document.getElementById('graficaAcustica').getContext('2d');
+      chartHistorial1Min = new Chart(ctx1, {
         type: 'line',
         data: {
-          labels: labels,
+          labels: [],
+          datasets: [
+            {
+              label: 'LAeq,1min [dBA]',
+              data: [],
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.12)',
+              borderWidth: 2,
+              fill: true,
+              pointRadius: 1,
+              spanGaps: false,
+              tension: 0.15
+            },
+            {
+              label: 'LAmax,1min [dBA]',
+              data: [],
+              borderColor: '#fb7185',
+              borderWidth: 1.5,
+              borderDash: [3, 3],
+              fill: false,
+              pointRadius: 0,
+              spanGaps: false,
+              tension: 0.15
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8', maxTicksLimit: 25, font: { size: 10 } }
+            },
+            y: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8', font: { size: 11 } },
+              suggestedMin: 35,
+              suggestedMax: 85
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
+            datalabels: { display: false }
+          }
+        }
+      });
+
+      // 2. Gráfica Diaria Ld / Ln
+      const ctx2 = document.getElementById('graficaLdLnDiaria').getContext('2d');
+      chartLdLnDiaria = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: ['Ld (Día)', 'Ln (Noche)'],
           datasets: [{
-            label: 'LAeq (dBA)',
-            data: data,
-            borderColor: '#38bdf8',
-            borderWidth: 2,
-            fill: false,
-            tension: 0.2
+            data: [null, null],
+            backgroundColor: ['rgba(251, 146, 60, 0.85)', 'rgba(99, 102, 241, 0.85)'],
+            borderColor: ['#fb923c', '#6366f1'],
+            borderWidth: 1.5,
+            borderRadius: 8
           }]
         },
         options: {
           responsive: true,
+          maintainAspectRatio: false,
           scales: {
-            x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-            y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+            x: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { weight: 'bold' } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'start',
+              offset: -22,
+              color: '#ffffff',
+              font: { weight: 'bold', size: 13 },
+              formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)} dBA` : 'Sin datos'
+            }
+          }
+        }
+      });
+
+      // 3. Gráfica Mensual Ld / Ln
+      const ctx3 = document.getElementById('graficaLdLnMensual').getContext('2d');
+      chartLdLnMensual = new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Ld [dBA]',
+              data: [],
+              borderColor: '#fb923c',
+              backgroundColor: 'rgba(251, 146, 60, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            },
+            {
+              label: 'Ln [dBA]',
+              data: [],
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } },
+            datalabels: { display: false }
+          }
+        }
+      });
+
+      // 4. Gráfica Anual (Preparada)
+      const ctx4 = document.getElementById('graficaAnual').getContext('2d');
+      chartAnual = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+          datasets: [
+            {
+              label: 'LAeq,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(99, 102, 241, 0.75)',
+              borderColor: '#6366f1',
+              borderWidth: 1,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#cbd5e1',
+              font: { size: 10, weight: 'bold' },
+              formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)}` : ''
+            }
           }
         }
       });
     }
 
-    function resetUI(msg) {
-      console.warn(msg);
-      document.getElementById("laeq-actual").innerText = "--.- dBA";
-      document.getElementById("total-muestras").innerText = "0";
+    // Funciones Matemáticas de Acústica Ambiental
+    function calcularLAeqPromedio(valores) {
+      const validos = valores.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 10);
+      if (validos.length === 0) return null;
+      const sumaEnergetica = validos.reduce((acc, v) => acc + Math.pow(10, v / 10), 0);
+      return 10 * Math.log10(sumaEnergetica / validos.length);
     }
+
+    async function obtenerActual() {
+      try {
+        const res = await fetch(URL_ACTUAL);
+        const data = await res.json();
+        if (data && data.LAeq_1s !== undefined) {
+          document.getElementById('val-laeq1s').innerText = data.LAeq_1s.toFixed(1);
+          document.getElementById('val-lceq1s').innerText = `${data.LCeq_1s.toFixed(1)} dBC`;
+          
+          if (data.lat && data.lng && marcador) {
+            marcador.setLatLng([data.lat, data.lng]);
+            document.getElementById('coords-text').innerText = `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
+          }
+
+          actualizarBadgeEstado(true);
+          ultimaRespuestaTime = Date.now();
+        }
+      } catch (err) {
+        console.error("Error tiempo real:", err);
+        if (Date.now() - ultimaRespuestaTime > 8000) {
+          actualizarBadgeEstado(false);
+        }
+      }
+    }
+
+    function actualizarBadgeEstado(activo) {
+      const badge = document.getElementById('badge-estado');
+      const dot = document.getElementById('dot-estado');
+      const texto = document.getElementById('texto-estado');
+
+      if (activo) {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        texto.innerText = "Nodo en Línea";
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        texto.innerText = "Sin Conexión";
+      }
+    }
+
+    // Carga y Procesamiento Principal de Datos Históricos
+    async function obtenerHistorial() {
+      try {
+        const res = await fetch(URL_HISTORIAL);
+        const data = await res.json();
+        if (!data) return;
+
+        datosBrutosGlobales = [];
+
+        Object.keys(data).forEach(key => {
+          const item = data[key];
+          if (item.timestamp && item.timestamp > 0) {
+            const fechaObj = new Date(item.timestamp * 1000);
+            
+            // Validar consistencia de datos (Filtrar ceros o nulos)
+            const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
+            const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
+            const lceqVal = (item.LCeq_1min && item.LCeq_1min > 10) ? item.LCeq_1min : null;
+
+            datosBrutosGlobales.push({
+              fechaObj: fechaObj,
+              timestamp: item.timestamp,
+              fechaStr: fechaObj.toISOString().split('T')[0],
+              hora: fechaObj.getHours(),
+              minuto: fechaObj.getMinutes(),
+              LAeq_1min: laeqVal,
+              LAmax_1min: lamaxVal,
+              LCeq_1min: lceqVal
+            });
+          }
+        });
+
+        // Ordenar por tiempo
+        datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
+
+        // Inicializar selectores con fechas recientes si no están configurados
+        if (datosBrutosGlobales.length > 0) {
+          const ultimaFechaStr = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStr;
+          
+          if (!document.getElementById('filtro-fecha-1min').value) {
+            document.getElementById('filtro-fecha-1min').value = ultimaFechaStr;
+          }
+          if (!document.getElementById('filtro-fecha-ldln').value) {
+            document.getElementById('filtro-fecha-ldln').value = ultimaFechaStr;
+          }
+          if (!document.getElementById('filtro-mes-ldln').value) {
+            document.getElementById('filtro-mes-ldln').value = ultimaFechaStr.substring(0, 7);
+          }
+        }
+
+        // Renderizar todas las vistas
+        renderizarVista1Min();
+        renderizarVistaLdLnDiaria();
+        renderizarVistaLdLnMensual();
+        renderizarVistaAnual();
+
+      } catch (err) {
+        console.error("Error al procesar historial:", err);
+      }
+    }
+
+    // 1. Renderizado de Gráfica 1 Minuto / Rango
+    function renderizarVista1Min() {
+      const fechaSel = document.getElementById('filtro-fecha-1min').value;
+      if (!fechaSel && modoPeriodo1Min === '1d') return;
+
+      let labels = [];
+      let laeqData = [];
+      let lamaxData = [];
+
+      if (modoPeriodo1Min === '1d') {
+        const mapaMinutos = new Map();
+        datosBrutosGlobales.forEach(d => {
+          if (d.fechaStr === fechaSel) {
+            const minKey = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
+            mapaMinutos.set(minKey, d);
+          }
+        });
+
+        for (let h = 0; h < 24; h++) {
+          for (let m = 0; m < 60; m++) {
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            labels.push(timeStr);
+            if (mapaMinutos.has(timeStr)) {
+              const reg = mapaMinutos.get(timeStr);
+              laeqData.push(reg.LAeq_1min);
+              lamaxData.push(reg.LAmax_1min);
+            } else {
+              laeqData.push(null);
+              lamaxData.push(null);
+            }
+          }
+        }
+      } else {
+        const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
+        const ahora = Date.now();
+        const tLimite = ahora - (diasLimite * 24 * 3600 * 1000);
+
+        const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
+
+        filtrados.forEach(d => {
+          labels.push(`${d.fechaStr.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
+          laeqData.push(d.LAeq_1min);
+          lamaxData.push(d.LAmax_1min);
+        });
+      }
+
+      chartHistorial1Min.data.labels = labels;
+      chartHistorial1Min.data.datasets[0].data = laeqData;
+      chartHistorial1Min.data.datasets[1].data = lamaxData;
+      chartHistorial1Min.update();
+
+      actualizarTarjetasSuperiores(laeqData, lamaxData);
+    }
+
+    function cambiarPeriodo1Min(periodo) {
+      modoPeriodo1Min = periodo;
+      ['1d', '7d', '30d'].forEach(p => {
+        const btn = document.getElementById(`btn-p-${p}`);
+        if (p === periodo) {
+          btn.className = "text-xs px-2.5 py-1 rounded font-medium transition bg-indigo-600 text-white";
+        } else {
+          btn.className = "text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition";
+        }
+      });
+      renderizarVista1Min();
+    }
+
+    function actualizarTarjetasSuperiores(laeqArr, lamaxArr) {
+      const laeqValidos = laeqArr.filter(v => v !== null && v !== undefined && !isNaN(v));
+      const lamaxValidos = lamaxArr.filter(v => v !== null && v !== undefined && !isNaN(v));
+
+      if (laeqValidos.length === 0) {
+        document.getElementById('stat-min').innerText = "--.- dBA";
+        document.getElementById('stat-avg').innerText = "--.- dBA";
+        document.getElementById('stat-max').innerText = "--.- dBA";
+        document.getElementById('stat-count').innerText = "0";
+        document.getElementById('val-laeq1min').innerText = "--.- dBA";
+        return;
+      }
+
+      const minVal = Math.min(...laeqValidos);
+      const maxVal = Math.max(...lamaxValidos.length > 0 ? lamaxValidos : laeqValidos);
+      const avgVal = calcularLAeqPromedio(laeqValidos);
+
+      document.getElementById('stat-min').innerText = `${minVal.toFixed(1)} dBA`;
+      document.getElementById('stat-max').innerText = `${maxVal.toFixed(1)} dBA`;
+      document.getElementById('stat-avg').innerText = avgVal !== null ? `${avgVal.toFixed(1)} dBA` : "--.- dBA";
+      document.getElementById('stat-count').innerText = laeqValidos.length;
+      document.getElementById('val-laeq1min').innerText = `${laeqValidos[laeqValidos.length - 1].toFixed(1)} dBA`;
+    }
+
+    // 2. Renderizado de Gráfica Diaria Ld / Ln
+    function renderizarVistaLdLnDiaria() {
+      const fechaSel = document.getElementById('filtro-fecha-ldln').value;
+      if (!fechaSel) return;
+
+      const muestrasDia = [];
+      const muestrasNoche = [];
+
+      datosBrutosGlobales.forEach(d => {
+        if (d.fechaStr === fechaSel && d.hora >= CONFIG_HORARIOS.dia.inicio && d.hora < CONFIG_HORARIOS.dia.fin) {
+          if (d.LAeq_1min !== null) muestrasDia.push(d.LAeq_1min);
+        }
+        if (d.fechaStr === fechaSel && (d.hora >= CONFIG_HORARIOS.noche.inicio || d.hora < CONFIG_HORARIOS.noche.fin)) {
+          if (d.LAeq_1min !== null) muestrasNoche.push(d.LAeq_1min);
+        }
+      });
+
+      const Ld = calcularLAeqPromedio(muestrasDia);
+      const Ln = calcularLAeqPromedio(muestrasNoche);
+
+      chartLdLnDiaria.data.datasets[0].data = [Ld, Ln];
+      chartLdLnDiaria.update();
+    }
+
+    // 3. Renderizado de Gráfica Mensual Ld / Ln
+    function renderizarVistaLdLnMensual() {
+      const mesSel = document.getElementById('filtro-mes-ldln').value;
+      if (!mesSel) return;
+
+      const [anioStr, mesStr] = mesSel.split('-');
+      const anio = parseInt(anioStr);
+      const mes = parseInt(mesStr);
+
+      const diasEnMes = new Date(anio, mes, 0).getDate();
+      const labels = [];
+      const ldArr = [];
+      const lnArr = [];
+
+      for (let dia = 1; dia <= diasEnMes; dia++) {
+        const diaStr = `${mesSel}-${String(dia).padStart(2, '0')}`;
+        labels.push(String(dia).padStart(2, '0'));
+
+        const muestrasDia = [];
+        const muestrasNoche = [];
+
+        datosBrutosGlobales.forEach(d => {
+          if (d.fechaStr === diaStr) {
+            if (d.hora >= CONFIG_HORARIOS.dia.inicio && d.hora < CONFIG_HORARIOS.dia.fin) {
+              if (d.LAeq_1min !== null) muestrasDia.push(d.LAeq_1min);
+            }
+            if (d.hora >= CONFIG_HORARIOS.noche.inicio || d.hora < CONFIG_HORARIOS.noche.fin) {
+              if (d.LAeq_1min !== null) muestrasNoche.push(d.LAeq_1min);
+            }
+          }
+        });
+
+        ldArr.push(calcularLAeqPromedio(muestrasDia));
+        lnArr.push(calcularLAeqPromedio(muestrasNoche));
+      }
+
+      chartLdLnMensual.data.labels = labels;
+      chartLdLnMensual.data.datasets[0].data = ldArr;
+      chartLdLnMensual.data.datasets[1].data = lnArr;
+      chartLdLnMensual.update();
+    }
+
+    // 4. Renderizado de Gráfica Anual (Estructura Preparada)
+    function renderizarVistaAnual() {
+      const anioSel = parseInt(document.getElementById('filtro-anio').value);
+      const datosMeses = Array(12).fill(null).map(() => []);
+
+      datosBrutosGlobales.forEach(d => {
+        if (d.fechaObj.getFullYear() === anioSel) {
+          const mIndex = d.fechaObj.getMonth();
+          if (d.LAeq_1min !== null) {
+            datosMeses[mIndex].push(d.LAeq_1min);
+          }
+        }
+      });
+
+      const promediosMensuales = datosMeses.map(arr => calcularLAeqPromedio(arr));
+
+      chartAnual.data.datasets[0].data = promediosMensuales;
+      chartAnual.update();
+    }
+
+    // Descarga de CSV
+    function descargarCSV() {
+      if (datosBrutosGlobales.length === 0) {
+        alert("No hay datos históricos para exportar.");
+        return;
+      }
+
+      let csv = "FechaHora,Fecha,Hora,Minuto,LAeq_1min_dBA,LAmax_1min_dBA,LCeq_1min_dBC\n";
+      datosBrutosGlobales.forEach(row => {
+        csv += `"${row.fechaObj.toLocaleString()}",${row.fechaStr},${row.hora},${row.minuto},${row.LAeq_1min !== null ? row.LAeq_1min : ''},${row.LAmax_1min !== null ? row.LAmax_1min : ''},${row.LCeq_1min !== null ? row.LCeq_1min : ''}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `monitoreo_acustico_neiva_${Date.now()}.csv`;
+      a.click();
+    }
+
+    // Event Listeners para Filtros
+    document.getElementById('filtro-fecha-1min').addEventListener('change', renderizarVista1Min);
+    document.getElementById('filtro-fecha-ldln').addEventListener('change', renderizarVistaLdLnDiaria);
+    document.getElementById('filtro-mes-ldln').addEventListener('change', renderizarVistaLdLnMensual);
+    document.getElementById('filtro-anio').addEventListener('change', renderizarVistaAnual);
+
+    // Inicialización al Cargar
+    window.onload = () => {
+      initMap();
+      initCharts();
+      
+      obtenerActual();
+      obtenerHistorial();
+
+      setInterval(obtenerActual, 2000);
+      setInterval(obtenerHistorial, 30000);
+    };
   </script>
 </body>
 </html>

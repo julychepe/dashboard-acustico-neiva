@@ -11,6 +11,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Plugin para etiquetas numéricas sobre barras -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <!-- Plugin para líneas de anotación de límites permisibles -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
@@ -30,7 +32,6 @@
       </div>
       
       <div class="flex items-center gap-3">
-        <!-- Badge Estado Nodo -->
         <span id="badge-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600 transition-colors">
           <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
           <span id="texto-estado">Conectando...</span>
@@ -170,8 +171,8 @@
     <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
-          <h2 class="text-base font-bold text-slate-100">Evolución anual del ruido ambiental</h2>
-          <p class="text-xs text-slate-400">Análisis comparativo de indicadores equivalentes por mes</p>
+          <h2 class="text-base font-bold text-slate-100">Evolución anual de Ld y Ln</h2>
+          <p class="text-xs text-slate-400">Análisis comparativo de indicadores diurnos y nocturnos por mes</p>
         </div>
         <div class="flex items-center gap-2">
           <label class="text-xs text-slate-400 font-medium" for="filtro-anio">Año:</label>
@@ -191,13 +192,6 @@
   <script>
     const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
     const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
-
-    // Configuración ajustada a la Res. 0627/2006 (Colombia)
-    // Diurno: 07:01 - 21:00 | Nocturno: 21:01 - 07:00
-    const CONFIG_HORARIOS = {
-      dia: { inicioHora: 7, inicioMin: 1, finHora: 21, finMin: 0 },
-      noche: { inicioHora: 21, inicioMin: 1, finHora: 7, finMin: 0 }
-    };
 
     let mapa, marcador;
     let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
@@ -302,6 +296,46 @@
               color: '#ffffff',
               font: { weight: 'bold', size: 13 },
               formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)} dBA` : 'Sin datos'
+            },
+            annotation: {
+              annotations: {
+                limiteLd: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  xMin: -0.4,
+                  xMax: 0.4,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Día (65 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                },
+                limiteLn: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  xMin: 0.6,
+                  xMax: 1.4,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Noche (50 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                }
+              }
             }
           }
         }
@@ -343,12 +377,48 @@
           },
           plugins: {
             legend: { labels: { color: '#e2e8f0' } },
-            datalabels: { display: false }
+            datalabels: { display: false },
+            annotation: {
+              annotations: {
+                limiteLd: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
+                },
+                limiteLn: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
+                }
+              }
+            }
           }
         }
       });
 
-      // 4. Gráfica Anual
+      // 4. Gráfica Anual de Ld y Ln por mes
       const ctx4 = document.getElementById('graficaAnual').getContext('2d');
       chartAnual = new Chart(ctx4, {
         type: 'bar',
@@ -356,9 +426,17 @@
           labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
           datasets: [
             {
-              label: 'LAeq,mes [dBA]',
+              label: 'Ld,mes [dBA]',
               data: Array(12).fill(null),
-              backgroundColor: 'rgba(99, 102, 241, 0.75)',
+              backgroundColor: 'rgba(251, 146, 60, 0.85)',
+              borderColor: '#fb923c',
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: 'Ln,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(99, 102, 241, 0.85)',
               borderColor: '#6366f1',
               borderWidth: 1,
               borderRadius: 6
@@ -378,15 +456,51 @@
               anchor: 'end',
               align: 'top',
               color: '#cbd5e1',
-              font: { size: 10, weight: 'bold' },
+              font: { size: 9, weight: 'bold' },
               formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)}` : ''
+            },
+            annotation: {
+              annotations: {
+                limiteLdAnual: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                },
+                limiteLnAnual: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                }
+              }
             }
           }
         }
       });
     }
 
-    // Promedio Promedio Logarítmico (Suma energética)
+    // Promedio Logarítmico (Suma energética)
     function calcularLAeqPromedio(valores) {
       const validos = valores.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 10);
       if (validos.length === 0) return null;
@@ -394,11 +508,11 @@
       return 10 * Math.log10(sumaEnergetica / validos.length);
     }
 
-    // Función auxiliar para determinar si una muestra pertenece al período diurno
+    // Determina si la muestra está dentro del horario diurno (07:01 a 21:00)
     function esHorarioDiurno(hora, minuto) {
       const minTotales = hora * 60 + minuto;
-      const inicioDiurno = 7 * 60 + 1;  // 07:01 (421 min)
-      const finDiurno = 21 * 60 + 0;    // 21:00 (1260 min)
+      const inicioDiurno = 7 * 60 + 1;  // 07:01
+      const finDiurno = 21 * 60 + 0;    // 21:00
       return minTotales >= inicioDiurno && minTotales <= finDiurno;
     }
 
@@ -455,6 +569,11 @@
           if (item.timestamp && item.timestamp > 0) {
             const fechaObj = new Date(item.timestamp * 1000);
             
+            const anio = fechaObj.getFullYear();
+            const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+            const dia = String(fechaObj.getDate()).padStart(2, '0');
+            const fechaStrLocal = `${anio}-${mes}-${dia}`;
+
             const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
             const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
             const lceqVal = (item.LCeq_1min && item.LCeq_1min > 10) ? item.LCeq_1min : null;
@@ -462,7 +581,7 @@
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
-              fechaStr: fechaObj.toISOString().split('T')[0],
+              fechaStr: fechaStrLocal,
               hora: fechaObj.getHours(),
               minuto: fechaObj.getMinutes(),
               LAeq_1min: laeqVal,
@@ -588,7 +707,6 @@
       document.getElementById('val-laeq1min').innerText = `${laeqValidos[laeqValidos.length - 1].toFixed(1)} dBA`;
     }
 
-    // 2. Renderizado de Gráfica Diaria Ld / Ln
     function renderizarVistaLdLnDiaria() {
       const fechaSel = document.getElementById('filtro-fecha-ldln').value;
       if (!fechaSel) return;
@@ -613,7 +731,6 @@
       chartLdLnDiaria.update();
     }
 
-    // 3. Renderizado de Gráfica Mensual Ld / Ln
     function renderizarVistaLdLnMensual() {
       const mesSel = document.getElementById('filtro-mes-ldln').value;
       if (!mesSel) return;
@@ -654,21 +771,27 @@
       chartLdLnMensual.update();
     }
 
-    // 4. Renderizado de Gráfica Anual
     function renderizarVistaAnual() {
       const anioSel = parseInt(document.getElementById('filtro-anio').value);
-      const datosMeses = Array(12).fill(null).map(() => []);
+      const muestrasDiaMeses = Array(12).fill(null).map(() => []);
+      const muestrasNocheMeses = Array(12).fill(null).map(() => []);
 
       datosBrutosGlobales.forEach(d => {
         if (d.fechaObj.getFullYear() === anioSel && d.LAeq_1min !== null) {
           const mIndex = d.fechaObj.getMonth();
-          datosMeses[mIndex].push(d.LAeq_1min);
+          if (esHorarioDiurno(d.hora, d.minuto)) {
+            muestrasDiaMeses[mIndex].push(d.LAeq_1min);
+          } else {
+            muestrasNocheMeses[mIndex].push(d.LAeq_1min);
+          }
         }
       });
 
-      const promediosMensuales = datosMeses.map(arr => calcularLAeqPromedio(arr));
+      const LdMensual = muestrasDiaMeses.map(arr => calcularLAeqPromedio(arr));
+      const LnMensual = muestrasNocheMeses.map(arr => calcularLAeqPromedio(arr));
 
-      chartAnual.data.datasets[0].data = promediosMensuales;
+      chartAnual.data.datasets[0].data = LdMensual;
+      chartAnual.data.datasets[1].data = LnMensual;
       chartAnual.update();
     }
 

@@ -9,9 +9,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <!-- Plugin para etiquetas numéricas sobre barras -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-  <!-- Plugin para líneas de anotación de límites permisibles -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
@@ -112,7 +110,7 @@
         <div class="flex flex-wrap items-center gap-3">
           <div class="flex items-center gap-2">
             <label class="text-xs text-slate-400 font-medium" for="filtro-fecha-1min">Fecha:</label>
-            <input type="date" id="filtro-fecha-1min" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+            <input type="date" id="filtro-fecha-1min" onchange="renderizarVista1Min()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
           </div>
           <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
             <button onclick="cambiarPeriodo1Min('1d')" id="btn-p-1d" class="text-xs px-2.5 py-1 rounded font-medium transition bg-indigo-600 text-white">1 día</button>
@@ -134,14 +132,14 @@
             <h2 class="text-base font-bold text-slate-100">Niveles día y noche</h2>
             <p class="text-xs text-slate-400">Indicadores Ld y Ln (Res. 0627/2006)</p>
           </div>
-          <input type="date" id="filtro-fecha-ldln" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
+          <input type="date" id="filtro-fecha-ldln" onchange="renderizarVistaLdLnDiaria()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
         </div>
         <div class="relative h-64 w-full">
           <canvas id="graficaLdLnDiaria"></canvas>
         </div>
       </div>
       <div class="mt-4 pt-3 border-t border-slate-700 text-center text-xs text-slate-400 font-mono">
-        <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00</span>
+        <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00 (+1d)</span>
       </div>
     </div>
 
@@ -151,10 +149,10 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div>
             <h2 class="text-base font-bold text-slate-100">Evolución mensual de Ld y Ln</h2>
-            <p class="text-xs text-slate-400">Indicadores Ld y Ln para cada día del mes</p>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln consolidados por fecha operacional</p>
           </div>
           <div class="flex items-center gap-2">
-            <input type="month" id="filtro-mes-ldln" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+            <input type="month" id="filtro-mes-ldln" onchange="renderizarVistaLdLnMensual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
           </div>
         </div>
         <div class="relative h-64 w-full">
@@ -162,7 +160,7 @@
         </div>
       </div>
       <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
-        <span>Valores consolidados por día de evaluación</span>
+        <span>Valores consolidados por período operacional</span>
         <span class="font-mono text-[11px]">Ld / Ln [dBA]</span>
       </div>
     </div>
@@ -176,7 +174,7 @@
         </div>
         <div class="flex items-center gap-2">
           <label class="text-xs text-slate-400 font-medium" for="filtro-anio">Año:</label>
-          <select id="filtro-anio" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          <select id="filtro-anio" onchange="renderizarVistaAnual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
             <option value="2026" selected>2026</option>
             <option value="2025">2025</option>
           </select>
@@ -508,7 +506,31 @@
       return 10 * Math.log10(sumaEnergetica / validos.length);
     }
 
-    // Determina si la muestra está dentro del horario diurno (07:01 a 21:00)
+    // Retorna la fecha operacional ajustada a la noche (+1 día en madrugada)
+    function obtenerFechaOperacional(fechaObj) {
+      const anio = fechaObj.getFullYear();
+      const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+      const dia = String(fechaObj.getDate()).padStart(2, '0');
+      
+      const hora = fechaObj.getHours();
+      const minuto = fechaObj.getMinutes();
+      const minTotales = hora * 60 + minuto;
+
+      // De 00:00 a 07:00 (0 a 420 min) la muestra se asigna al día anterior (Noche Ln de la fecha previa)
+      if (minTotales <= 420) {
+        const fechaAyer = new Date(fechaObj);
+        fechaAyer.setDate(fechaAyer.getDate() - 1);
+        
+        const anioAyer = fechaAyer.getFullYear();
+        const mesAyer = String(fechaAyer.getMonth() + 1).padStart(2, '0');
+        const diaAyer = String(fechaAyer.getDate()).padStart(2, '0');
+        return `${anioAyer}-${mesAyer}-${diaAyer}`;
+      }
+
+      return `${anio}-${mes}-${dia}`;
+    }
+
+    // Determina si la muestra es diurna (07:01 a 21:00)
     function esHorarioDiurno(hora, minuto) {
       const minTotales = hora * 60 + minuto;
       const inicioDiurno = 7 * 60 + 1;  // 07:01
@@ -572,7 +594,8 @@
             const anio = fechaObj.getFullYear();
             const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
             const dia = String(fechaObj.getDate()).padStart(2, '0');
-            const fechaStrLocal = `${anio}-${mes}-${dia}`;
+            const fechaStrCalendario = `${anio}-${mes}-${dia}`;
+            const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
 
             const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
             const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
@@ -581,7 +604,8 @@
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
-              fechaStr: fechaStrLocal,
+              fechaStrCalendario: fechaStrCalendario,
+              fechaStrOperacional: fechaStrOperacional,
               hora: fechaObj.getHours(),
               minuto: fechaObj.getMinutes(),
               LAeq_1min: laeqVal,
@@ -594,7 +618,7 @@
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
 
         if (datosBrutosGlobales.length > 0) {
-          const ultimaFechaStr = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStr;
+          const ultimaFechaStr = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStrOperacional;
           
           if (!document.getElementById('filtro-fecha-1min').value) {
             document.getElementById('filtro-fecha-1min').value = ultimaFechaStr;
@@ -628,7 +652,7 @@
       if (modoPeriodo1Min === '1d') {
         const mapaMinutos = new Map();
         datosBrutosGlobales.forEach(d => {
-          if (d.fechaStr === fechaSel) {
+          if (d.fechaStrCalendario === fechaSel) {
             const minKey = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
             mapaMinutos.set(minKey, d);
           }
@@ -656,7 +680,7 @@
         const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
 
         filtrados.forEach(d => {
-          labels.push(`${d.fechaStr.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
+          labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
           laeqData.push(d.LAeq_1min);
           lamaxData.push(d.LAmax_1min);
         });
@@ -715,7 +739,7 @@
       const muestrasNoche = [];
 
       datosBrutosGlobales.forEach(d => {
-        if (d.fechaStr === fechaSel && d.LAeq_1min !== null) {
+        if (d.fechaStrOperacional === fechaSel && d.LAeq_1min !== null) {
           if (esHorarioDiurno(d.hora, d.minuto)) {
             muestrasDia.push(d.LAeq_1min);
           } else {
@@ -752,7 +776,7 @@
         const muestrasNoche = [];
 
         datosBrutosGlobales.forEach(d => {
-          if (d.fechaStr === diaStr && d.LAeq_1min !== null) {
+          if (d.fechaStrOperacional === diaStr && d.LAeq_1min !== null) {
             if (esHorarioDiurno(d.hora, d.minuto)) {
               muestrasDia.push(d.LAeq_1min);
             } else {
@@ -777,58 +801,61 @@
       const muestrasNocheMeses = Array(12).fill(null).map(() => []);
 
       datosBrutosGlobales.forEach(d => {
-        if (d.fechaObj.getFullYear() === anioSel && d.LAeq_1min !== null) {
-          const mIndex = d.fechaObj.getMonth();
+        const anioOp = parseInt(d.fechaStrOperacional.split('-')[0]);
+        const mesOp = parseInt(d.fechaStrOperacional.split('-')[1]) - 1;
+
+        if (anioOp === anioSel && d.LAeq_1min !== null) {
           if (esHorarioDiurno(d.hora, d.minuto)) {
-            muestrasDiaMeses[mIndex].push(d.LAeq_1min);
+            muestrasDiaMeses[mesOp].push(d.LAeq_1min);
           } else {
-            muestrasNocheMeses[mIndex].push(d.LAeq_1min);
+            muestrasNocheMeses[mesOp].push(d.LAeq_1min);
           }
         }
       });
 
-      const LdMensual = muestrasDiaMeses.map(arr => calcularLAeqPromedio(arr));
-      const LnMensual = muestrasNocheMeses.map(arr => calcularLAeqPromedio(arr));
+      const ldMensual = muestrasDiaMeses.map(m => calcularLAeqPromedio(m));
+      const lnMensual = muestrasNocheMeses.map(m => calcularLAeqPromedio(m));
 
-      chartAnual.data.datasets[0].data = LdMensual;
-      chartAnual.data.datasets[1].data = LnMensual;
+      chartAnual.data.datasets[0].data = ldMensual;
+      chartAnual.data.datasets[1].data = lnMensual;
       chartAnual.update();
     }
 
     function descargarCSV() {
-      if (datosBrutosGlobales.length === 0) {
-        alert("No hay datos históricos para exportar.");
+      if (!datosBrutosGlobales || datosBrutosGlobales.length === 0) {
+        alert("No hay datos históricos disponibles para exportar.");
         return;
       }
 
-      let csv = "FechaHora,Fecha,Hora,Minuto,LAeq_1min_dBA,LAmax_1min_dBA,LCeq_1min_dBC\n";
-      datosBrutosGlobales.forEach(row => {
-        csv += `"${row.fechaObj.toLocaleString()}",${row.fechaStr},${row.hora},${row.minuto},${row.LAeq_1min !== null ? row.LAeq_1min : ''},${row.LAmax_1min !== null ? row.LAmax_1min : ''},${row.LCeq_1min !== null ? row.LCeq_1min : ''}\n`;
+      let csvContent = "data:text/csv;charset=utf-8,Timestamp,Fecha_Calendario,Fecha_Operacional,Hora,LAeq_1min,LAmax_1min,LCeq_1min\n";
+
+      datosBrutosGlobales.forEach(d => {
+        const horaStr = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}:00`;
+        const laeq = d.LAeq_1min !== null ? d.LAeq_1min.toFixed(2) : "";
+        const lamax = d.LAmax_1min !== null ? d.LAmax_1min.toFixed(2) : "";
+        const lceq = d.LCeq_1min !== null ? d.LCeq_1min.toFixed(2) : "";
+
+        csvContent += `${d.timestamp},${d.fechaStrCalendario},${d.fechaStrOperacional},${horaStr},${laeq},${lamax},${lceq}\n`;
       });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `monitoreo_acustico_neiva_${Date.now()}.csv`;
-      a.click();
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `monitoreo_acustico_nodo1_${new Date().toISOString().substring(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
-    document.getElementById('filtro-fecha-1min').addEventListener('change', renderizarVista1Min);
-    document.getElementById('filtro-fecha-ldln').addEventListener('change', renderizarVistaLdLnDiaria);
-    document.getElementById('filtro-mes-ldln').addEventListener('change', renderizarVistaLdLnMensual);
-    document.getElementById('filtro-anio').addEventListener('change', renderizarVistaAnual);
-
-    window.onload = () => {
+    window.addEventListener('DOMContentLoaded', () => {
       initMap();
       initCharts();
-      
       obtenerActual();
       obtenerHistorial();
 
       setInterval(obtenerActual, 2000);
-      setInterval(obtenerHistorial, 30000);
-    };
+      setInterval(obtenerHistorial, 60000);
+    });
   </script>
 </body>
 </html>

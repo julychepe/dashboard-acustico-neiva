@@ -437,30 +437,53 @@
     }
 
     async function obtenerActual() {
-      try {
-        const res = await fetch(URL_ACTUAL);
-        const data = await res.json();
-        if (data && data.LAeq_1min !== undefined) {
-          document.getElementById('val-laeq1s').innerText = data.LAeq_1min.toFixed(1);
-          document.getElementById('val-lceq1s').innerText = `${data.LCeq_1min.toFixed(1)} dBC`;
-          
-          if (data.lat && data.lng && marcador) {
-            marcador.setLatLng([data.lat, data.lng]);
-            document.getElementById('coords-text').innerText = `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
-          }
+  try {
+    const res = await fetch(URL_ACTUAL);
+    const data = await res.json();
+    
+    if (data) {
+      let ultimo = null;
 
-          if (data.timestamp) {
-            ultimoRegistroTimestampMs = data.timestamp * 1000;
-          } else {
-            ultimoRegistroTimestampMs = Date.now();
-          }
-          verificarEstadoConexion();
+      // Si Firebase devuelve un objeto con push keys (como -PIauqg-...),
+      // obtenemos la última clave insertada
+      if (typeof data === 'object' && !data.LAeq_1min) {
+        const keys = Object.keys(data);
+        if (keys.length > 0) {
+          const ultimaClave = keys[keys.length - 1];
+          ultimo = data[ultimaClave];
         }
-      } catch (err) {
-        console.error("Error tiempo real:", err);
+      } else {
+        // Si el JSON viene directo como un solo objeto
+        ultimo = data;
+      }
+
+      // Verificamos que 'ultimo' exista y contenga el valor
+      if (ultimo && ultimo.LAeq_1min !== undefined) {
+        document.getElementById('val-laeq1s').innerText = Number(ultimo.LAeq_1min).toFixed(1);
+        
+        if (ultimo.LCeq_1min !== undefined) {
+          document.getElementById('val-lceq1s').innerText = `${Number(ultimo.LCeq_1min).toFixed(1)} dBC`;
+        }
+
+        if (ultimo.lat && ultimo.lng && marcador) {
+          marcador.setLatLng([ultimo.lat, ultimo.lng]);
+          document.getElementById('coords-text').innerText = `${ultimo.lat.toFixed(6)}, ${ultimo.lng.toFixed(6)}`;
+        }
+
+        if (ultimo.timestamp) {
+          ultimoRegistroTimestampMs = ultimo.timestamp * 1000;
+        } else {
+          ultimoRegistroTimestampMs = Date.now();
+        }
+        
         verificarEstadoConexion();
       }
     }
+  } catch (err) {
+    console.error("Error tiempo real:", err);
+    verificarEstadoConexion();
+  }
+}
 
     function verificarEstadoConexion() {
       const ahoraMs = Date.now();

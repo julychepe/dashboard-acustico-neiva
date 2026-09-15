@@ -3,386 +3,763 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Panel de Monitoreo Acústico - Neiva</title>
+  <title>Sistema de Monitoreo Acústico - Neiva</title>
   
-  <!-- Leaflet CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    :root {
-      --bg-color: #f4f6f9;
-      --card-bg: #ffffff;
-      --primary: #1e3a8a;
-      --accent: #2563eb;
-      --text: #1f2937;
-      --border: #e5e7eb;
-    }
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: var(--bg-color);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(12, 1fr);
-      gap: 20px;
-    }
-
-    .header {
-      grid-column: span 12;
-      background-color: var(--primary);
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .card {
-      background-color: var(--card-bg);
-      border-radius: 8px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    .col-12 { grid-column: span 12; }
-    .col-6 { grid-column: span 6; }
-    .col-4 { grid-column: span 4; }
-
-    #map {
-      height: 300px;
-      width: 100%;
-      border-radius: 6px;
-    }
-
-    .metric-value {
-      font-size: 2.5rem;
-      font-weight: bold;
-      color: var(--accent);
-    }
-
-    .controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 15px;
-      flex-wrap: wrap;
-    }
-
-    input, select, button {
-      padding: 8px 12px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 0.9rem;
-    }
-
-    button {
-      background-color: var(--accent);
-      color: white;
-      border: none;
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    button:hover {
-      opacity: 0.9;
-    }
-
-    button.danger {
-      background-color: #dc2626;
-    }
-
-    canvas {
-      max-width: 100%;
-    }
-  </style>
-</head>
-<body>
-
-  <div class="container">
-    <div class="header">
-      <div>
-        <h1 style="margin:0;">Estación de Monitoreo Acústico Continuo</h1>
-        <small>Nodo Tecnoparque - Neiva, Huila</small>
-      </div>
-      <div id="status-tag" style="background:#16a34a; padding:6px 12px; border-radius:20px; font-size:0.8rem;">En Línea</div>
-    </div>
-
-    <!-- Métrica en Tiempo Real y Mapa -->
-    <div class="card col-4">
-      <h3>Última Lectura</h3>
-      <div id="val-laeq" class="metric-value">-- dBA</div>
-      <p><small>LAmax: <span id="val-lamax">--</span> dBA | LCeq: <span id="val-lceq">--</span> dBC</small></p>
-      <p><small>Última actualización: <span id="val-tiempo">--</span></small></p>
-    </div>
-
-    <div class="card col-8">
-      <h3>Ubicación del Sensor</h3>
-      <div id="map"></div>
-    </div>
-
-    <!-- Monitoreo Diario (1 min) -->
-    <div class="card col-12">
-      <div class="controls">
-        <h3>Evolución Temporal (Resolución 1 Minuto)</h3>
-        <input type="date" id="filtro-fecha-diaria">
-        <button onclick="renderizarVistaDiaria()">Cargar Día</button>
-      </div>
-      <canvas id="chartDiario" height="80"></canvas>
-    </div>
-
-    <!-- Indicadores Ld y Ln (Diario) -->
-    <div class="card col-6">
-      <div class="controls">
-        <h3>Descriptor Diario ($L_d / L_n$)</h3>
-        <input type="date" id="filtro-fecha-ldln">
-        <button onclick="renderizarVistaLdLnDiaria()">Calcular</button>
-      </div>
-      <canvas id="chartLdLnDiaria" height="150"></canvas>
-    </div>
-
-    <!-- Indicadores Ld y Ln (Mensual) -->
-    <div class="card col-6">
-      <div class="controls">
-        <h3>Comportamiento Mensual ($L_d / L_n$)</h3>
-        <input type="month" id="filtro-mes-ldln">
-        <button onclick="renderizarVistaLdLnMensual()">Calcular Mes</button>
-      </div>
-      <canvas id="chartLdLnMensual" height="150"></canvas>
-    </div>
-
-    <!-- Análisis Anual -->
-    <div class="card col-12">
-      <div class="controls">
-        <h3>Histórico Anual por Meses</h3>
-        <input type="number" id="filtro-anio" min="2024" max="2030" value="2026">
-        <button onclick="renderizarVistaAnual()">Cargar Año</button>
-      </div>
-      <canvas id="chartAnual" height="80"></canvas>
-    </div>
-
-    <!-- Gestión de Datos -->
-    <div class="card col-12">
-      <h3>Exportación y Mantenimiento de Datos</h3>
-      <div class="controls">
-        <label>Desde: <input type="date" id="export-inicio"></label>
-        <label>Hasta: <input type="date" id="export-fin"></label>
-        <button onclick="descargarCSVFiltrado()">Descargar CSV</button>
-        <button class="danger" onclick="borrarHistorialFirebase()" style="margin-left:auto;">Borrar Base de Datos</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Leaflet JS -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
+
+  <!-- Header -->
+  <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+      <div class="flex items-center gap-3">
+        <div class="p-2.5 bg-indigo-600 rounded-xl shadow-inner">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight">Red de Monitoreo Acústico</h1>
+          <p class="text-xs text-slate-400">Estación 01 — Tecnoparque / Neiva, Huila</p>
+        </div>
+      </div>
+      
+      <div class="flex flex-wrap items-center gap-3">
+        <span id="badge-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600 transition-colors">
+          <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span id="texto-estado">Conectando...</span>
+        </span>
+
+        <!-- Filtro Rango de Fechas para Descarga -->
+        <div class="flex items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
+          <span class="text-[11px] text-slate-400 pl-1">Desde:</span>
+          <input type="date" id="export-inicio" class="bg-slate-800 border border-slate-600 text-xs text-slate-200 rounded px-1.5 py-1 focus:outline-none focus:border-indigo-500">
+          <span class="text-[11px] text-slate-400">Hasta:</span>
+          <input type="date" id="export-fin" class="bg-slate-800 border border-slate-600 text-xs text-slate-200 rounded px-1.5 py-1 focus:outline-none focus:border-indigo-500">
+          
+          <button onclick="descargarCSVFiltrado()" class="bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs px-3 py-1 rounded font-medium shadow transition flex items-center gap-1 ml-1">
+            📥 CSV
+          </button>
+        </div>
+
+        <!-- Botón para Borrar Historial Firebase -->
+        <button onclick="borrarHistorialFirebase()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1">
+          🗑️ Borrar Historial
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Principal -->
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Tarjeta Lectura Instantánea -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tiempo Real (2s)</h2>
+          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
+        </div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
+          <span class="text-2xl font-bold text-slate-400">dBA</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo (LAeq,1s)</p>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-2 gap-4">
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
+          <span id="val-lceq1s" class="text-base font-bold text-slate-200">--.- dBC</span>
+        </div>
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Último Minuto</span>
+          <span id="val-laeq1min" class="text-base font-bold text-emerald-400">--.- dBA</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapa -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-3 px-1">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
+        <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+      </div>
+      <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
+    </div>
+
+    <!-- Tarjetas de Métricas del Día -->
+    <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Mínimo Registrado</span>
+        <span id="stat-min" class="text-2xl font-bold text-sky-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">LAeq promedio</span>
+        <span id="stat-avg" class="text-2xl font-bold text-indigo-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Máximo Registrado</span>
+        <span id="stat-max" class="text-2xl font-bold text-rose-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Total Muestras (1min)</span>
+        <span id="stat-count" class="text-2xl font-bold text-emerald-400 mt-1 block">0</span>
+      </div>
+    </div>
+
+    <!-- 1. GRÁFICA DE EVOLUCIÓN TEMPORAL DE RUIDO AMBIENTAL -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Evolución temporal del ruido ambiental</h2>
+          <p class="text-xs text-slate-400">Comportamiento temporal del ruido ambiental</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="flex items-center gap-2">
+            <label class="text-xs text-slate-400 font-medium" for="filtro-fecha-1min">Fecha:</label>
+            <input type="date" id="filtro-fecha-1min" onchange="renderizarVista1Min()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          </div>
+          <div class="flex items-center gap-1 bg-slate-900 p-1 rounded-lg border border-slate-700">
+            <button onclick="cambiarPeriodo1Min('1d')" id="btn-p-1d" class="text-xs px-2.5 py-1 rounded font-medium transition bg-indigo-600 text-white">1 día</button>
+            <button onclick="cambiarPeriodo1Min('7d')" id="btn-p-7d" class="text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">7 días</button>
+            <button onclick="cambiarPeriodo1Min('30d')" id="btn-p-30d" class="text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition">30 días</button>
+          </div>
+        </div>
+      </div>
+      <div class="relative h-80 w-full">
+        <canvas id="graficaAcustica"></canvas>
+      </div>
+    </div>
+
+    <!-- 2. GRÁFICA DIARIA Ld / Ln -->
+    <div class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Niveles día y noche</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln (Res. 0627/2006)</p>
+          </div>
+          <input type="date" id="filtro-fecha-ldln" onchange="renderizarVistaLdLnDiaria()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnDiaria"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 text-center text-xs text-slate-400 font-mono">
+        <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00 (+1d)</span>
+      </div>
+    </div>
+
+    <!-- 3. GRÁFICA MENSUAL DE Ld Y Ln -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Evolución mensual de Ld y Ln</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln consolidados por fecha operacional</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="month" id="filtro-mes-ldln" onchange="renderizarVistaLdLnMensual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnMensual"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+        <span>Valores consolidados por período operacional</span>
+        <span class="font-mono text-[11px]">Ld / Ln [dBA]</span>
+      </div>
+    </div>
+
+    <!-- 4. GRÁFICA ANUAL DE EVOLUCIÓN HISTÓRICA -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold text-slate-100">Evolución anual de Ld y Ln</h2>
+          <p class="text-xs text-slate-400">Análisis comparativo de indicadores diurnos y nocturnos por mes</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-xs text-slate-400 font-medium" for="filtro-anio">Año:</label>
+          <select id="filtro-anio" onchange="renderizarVistaAnual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+            <option value="2026" selected>2026</option>
+            <option value="2025">2025</option>
+          </select>
+        </div>
+      </div>
+      <div class="relative h-72 w-full">
+        <canvas id="graficaAnual"></canvas>
+      </div>
+    </div>
+
+  </main>
 
   <script>
-    // Configuración Firebase Realtime Database
-    const DB_BASE_URL = "https://TU_PROYECTO.firebaseio.com/"; // Reemplazar con la URL de tu base de datos
-    const URL_ACTUAL = `${DB_BASE_URL}actual.json`;
-    const URL_HISTORIAL = `${DB_BASE_URL}historial.json`;
+    const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
+    const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
 
-    // Variables Globales
-    let map, marker;
-    let chartDiario, chartLdLnDiaria, chartLdLnMensual, chartAnual;
+    let mapa, marcador;
+    let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
     let datosBrutosGlobales = [];
+    let ultimaRespuestaTime = 0;
+    let modoPeriodo1Min = '1d';
 
-    // Función aux: Integración logarítmica de niveles equivalentes
-    function calcularLAeqPromedio(arregloNiveles) {
-      if (!arregloNiveles || arregloNiveles.length === 0) return null;
-      const sumaPotencias = arregloNiveles.reduce((acc, val) => acc + Math.pow(10, val / 10), 0);
-      return 10 * Math.log10(sumaPotencias / arregloNiveles.length);
+    Chart.register(ChartDataLabels);
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initMap();
+      initCharts();
+      obtenerActual();
+      obtenerHistorial();
+      setInterval(obtenerActual, 2000);
+      setInterval(obtenerHistorial, 30000);
+    });
+
+    function initMap(lat = 2.865666, lng = -75.216591) {
+      mapa = L.map('mapa', { zoomControl: false }).setView([lat, lng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(mapa);
+
+      marcador = L.marker([lat, lng]).addTo(mapa)
+        .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa.')
+        .openPopup();
     }
 
-    // Identificar si la lectura pertenece al horario diurno (07:01 a 21:00)
+    function initCharts() {
+      // 1. Gráfica 1 Minuto
+      const ctx1 = document.getElementById('graficaAcustica').getContext('2d');
+      chartHistorial1Min = new Chart(ctx1, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'LAeq,1min [dBA]',
+              data: [],
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.12)',
+              borderWidth: 2,
+              fill: true,
+              pointRadius: 1,
+              spanGaps: false,
+              tension: 0.15
+            },
+            {
+              label: 'LAmax,1min [dBA]',
+              data: [],
+              borderColor: '#fb7185',
+              borderWidth: 1.5,
+              borderDash: [3, 3],
+              fill: false,
+              pointRadius: 0,
+              spanGaps: false,
+              tension: 0.15
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8', maxTicksLimit: 25, font: { size: 10 } }
+            },
+            y: {
+              grid: { color: '#334155' },
+              ticks: { color: '#94a3b8', font: { size: 11 } },
+              suggestedMin: 35,
+              suggestedMax: 85
+            }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
+            datalabels: { display: false }
+          }
+        }
+      });
+
+      // 2. Gráfica Diaria Ld / Ln
+      const ctx2 = document.getElementById('graficaLdLnDiaria').getContext('2d');
+      chartLdLnDiaria = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+          labels: ['Ld (Día)', 'Ln (Noche)'],
+          datasets: [{
+            data: [null, null],
+            backgroundColor: ['rgba(251, 146, 60, 0.85)', 'rgba(99, 102, 241, 0.85)'],
+            borderColor: ['#fb923c', '#6366f1'],
+            borderWidth: 1.5,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { weight: 'bold' } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { display: false },
+            datalabels: {
+              anchor: 'end',
+              align: 'start',
+              offset: -22,
+              color: '#ffffff',
+              font: { weight: 'bold', size: 13 },
+              formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)} dBA` : 'Sin datos'
+            },
+            annotation: {
+              annotations: {
+                limiteLd: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  xMin: -0.4,
+                  xMax: 0.4,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Día (65 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                },
+                limiteLn: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  xMin: 0.6,
+                  xMax: 1.4,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Noche (50 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // 3. Gráfica Mensual Ld / Ln
+      const ctx3 = document.getElementById('graficaLdLnMensual').getContext('2d');
+      chartLdLnMensual = new Chart(ctx3, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Ld [dBA]',
+              data: [],
+              borderColor: '#fb923c',
+              backgroundColor: 'rgba(251, 146, 60, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            },
+            {
+              label: 'Ln [dBA]',
+              data: [],
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } },
+            datalabels: { display: false },
+            annotation: {
+              annotations: {
+                limiteLd: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
+                },
+                limiteLn: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      // 4. Gráfica Anual de Ld y Ln por mes
+      const ctx4 = document.getElementById('graficaAnual').getContext('2d');
+      chartAnual = new Chart(ctx4, {
+        type: 'bar',
+        data: {
+          labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
+          datasets: [
+            {
+              label: 'Ld,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(251, 146, 60, 0.85)',
+              borderColor: '#fb923c',
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: 'Ln,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(99, 102, 241, 0.85)',
+              borderColor: '#6366f1',
+              borderWidth: 1,
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } },
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestedMin: 30, suggestedMax: 85 }
+          },
+          plugins: {
+            legend: { labels: { color: '#e2e8f0' } },
+            datalabels: {
+              anchor: 'end',
+              align: 'top',
+              color: '#cbd5e1',
+              font: { size: 9, weight: 'bold' },
+              formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)}` : ''
+            },
+            annotation: {
+              annotations: {
+                limiteLdAnual: {
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                },
+                limiteLnAnual: {
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // Promedio Logarítmico (Suma energética)
+    function calcularLAeqPromedio(valores) {
+      const validos = valores.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 10);
+      if (validos.length === 0) return null;
+      const sumaEnergetica = validos.reduce((acc, v) => acc + Math.pow(10, v / 10), 0);
+      return 10 * Math.log10(sumaEnergetica / validos.length);
+    }
+
+    // Retorna la fecha operacional ajustada a la noche (+1 día en madrugada)
+    function obtenerFechaOperacional(fechaObj) {
+      const anio = fechaObj.getFullYear();
+      const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+      const dia = String(fechaObj.getDate()).padStart(2, '0');
+      
+      const hora = fechaObj.getHours();
+      const minuto = fechaObj.getMinutes();
+      const minTotales = hora * 60 + minuto;
+
+      // De 00:00 a 07:00 (0 a 420 min) la muestra se asigna al día anterior (Noche Ln del día de origen)
+      if (minTotales <= 420) {
+        const fechaAyer = new Date(fechaObj);
+        fechaAyer.setDate(fechaAyer.getDate() - 1);
+        
+        const anioAyer = fechaAyer.getFullYear();
+        const mesAyer = String(fechaAyer.getMonth() + 1).padStart(2, '0');
+        const diaAyer = String(fechaAyer.getDate()).padStart(2, '0');
+        return `${anioAyer}-${mesAyer}-${diaAyer}`;
+      }
+
+      return `${anio}-${mes}-${dia}`;
+    }
+
+    // Determina si la muestra es diurna (07:01 a 21:00)
     function esHorarioDiurno(hora, minuto) {
       const minTotales = hora * 60 + minuto;
-      return minTotales >= (7 * 60 + 1) && minTotales <= (21 * 60);
+      const inicioDiurno = 7 * 60 + 1;  // 07:01
+      const finDiurno = 21 * 60 + 0;    // 21:00
+      return minTotales >= inicioDiurno && minTotales <= finDiurno;
     }
 
-    // Inicializar Mapa (Neiva, Colombia)
-    function initMap() {
-      const latNeiva = 2.9273;
-      const lngNeiva = -75.2819;
-      map = L.map('map').setView([latNeiva, lngNeiva], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(map);
-      marker = L.marker([latNeiva, lngNeiva]).addTo(map).bindPopup("Nodo Acústico Tecnoparque");
-    }
-
-    // Inicializar Gráficas
-    function initCharts() {
-      // 1. Gráfica Diaria (Minuto a Minuto)
-      const ctxDiario = document.getElementById('chartDiario').getContext('2d');
-      chartDiario = new Chart(ctxDiario, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [{
-            label: 'LAeq 1 min (dBA)',
-            data: [],
-            borderColor: '#2563eb',
-            borderWidth: 1.5,
-            pointRadius: 0,
-            fill: false
-          }]
-        },
-        options: { responsive: true, scales: { y: { min: 35, max: 90 } } }
-      });
-
-      // 2. Gráfica Ld / Ln Diario
-      const ctxLdLnDiaria = document.getElementById('chartLdLnDiaria').getContext('2d');
-      chartLdLnDiaria = new Chart(ctxLdLnDiaria, {
-        type: 'bar',
-        data: {
-          labels: ['Ld (07:01 - 21:00)', 'Ln (21:01 - 07:00)'],
-          datasets: [{
-            label: 'Nivel Equivalente (dBA)',
-            data: [null, null],
-            backgroundColor: ['#eab308', '#1e3a8a']
-          }]
-        },
-        options: { responsive: true, scales: { y: { min: 30, max: 85 } } }
-      });
-
-      // 3. Gráfica Ld / Ln Mensual
-      const ctxLdLnMensual = document.getElementById('chartLdLnMensual').getContext('2d');
-      chartLdLnMensual = new Chart(ctxLdLnMensual, {
-        type: 'line',
-        data: {
-          labels: [],
-          datasets: [
-            { label: 'Ld (Diurno)', data: [], borderColor: '#eab308', tension: 0.1 },
-            { label: 'Ln (Nocturno)', data: [], borderColor: '#1e3a8a', tension: 0.1 }
-          ]
-        },
-        options: { responsive: true }
-      });
-
-      // 4. Gráfica Anual
-      const ctxAnual = document.getElementById('chartAnual').getContext('2d');
-      chartAnual = new Chart(ctxAnual, {
-        type: 'bar',
-        data: {
-          labels: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'],
-          datasets: [
-            { label: 'Ld Promedio', data: [], backgroundColor: '#eab308' },
-            { label: 'Ln Promedio', data: [], backgroundColor: '#1e3a8a' }
-          ]
-        },
-        options: { responsive: true }
-      });
-    }
-
-    // Consulta de tiempo real
     async function obtenerActual() {
       try {
         const res = await fetch(URL_ACTUAL);
         const data = await res.json();
-        if (data) {
-          document.getElementById('val-laeq').innerText = data.LAeq_1min ? `${data.LAeq_1min.toFixed(1)} dBA` : '-- dBA';
-          document.getElementById('val-lamax').innerText = data.LAmax_1min ? data.LAmax_1min.toFixed(1) : '--';
-          document.getElementById('val-lceq').innerText = data.LCeq_1min ? data.LCeq_1min.toFixed(1) : '--';
-          document.getElementById('val-tiempo').innerText = new Date().toLocaleTimeString();
+        if (data && data.LAeq_1s !== undefined) {
+          document.getElementById('val-laeq1s').innerText = data.LAeq_1s.toFixed(1);
+          document.getElementById('val-lceq1s').innerText = `${data.LCeq_1s.toFixed(1)} dBC`;
+          
+          if (data.lat && data.lng && marcador) {
+            marcador.setLatLng([data.lat, data.lng]);
+            document.getElementById('coords-text').innerText = `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
+          }
+
+          actualizarBadgeEstado(true);
+          ultimaRespuestaTime = Date.now();
         }
-      } catch (e) {
-        console.error("Error al obtener dato actual:", e);
+      } catch (err) {
+        console.error("Error tiempo real:", err);
+        if (Date.now() - ultimaRespuestaTime > 8000) {
+          actualizarBadgeEstado(false);
+        }
       }
     }
 
-    // Carga global de la base de datos de historial
+    function actualizarBadgeEstado(activo) {
+      const badge = document.getElementById('badge-estado');
+      const dot = document.getElementById('dot-estado');
+      const texto = document.getElementById('texto-estado');
+
+      if (activo) {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
+        texto.innerText = "Nodo en Línea";
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
+        dot.className = "w-2 h-2 rounded-full bg-rose-500";
+        texto.innerText = "Sin Conexión";
+      }
+    }
+
     async function obtenerHistorial() {
       try {
         const res = await fetch(URL_HISTORIAL);
         const data = await res.json();
-        if (!data) return;
+        if (!data) {
+          datosBrutosGlobales = [];
+          renderizarVista1Min();
+          renderizarVistaLdLnDiaria();
+          renderizarVistaLdLnMensual();
+          renderizarVistaAnual();
+          return;
+        }
 
         datosBrutosGlobales = [];
 
         Object.keys(data).forEach(key => {
           const item = data[key];
-          const fechaObj = new Date(item.timestamp * 1000);
-          
-          const anio = fechaObj.getFullYear();
-          const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-          const dia = String(fechaObj.getDate()).padStart(2, '0');
-          const hora = fechaObj.getHours();
-          const minuto = fechaObj.getMinutes();
+          if (item.timestamp && item.timestamp > 0) {
+            const fechaObj = new Date(item.timestamp * 1000);
+            
+            const anio = fechaObj.getFullYear();
+            const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
+            const dia = String(fechaObj.getDate()).padStart(2, '0');
+            const fechaStrCalendario = `${anio}-${mes}-${dia}`;
+            const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
 
-          // Cadena para fecha en formato de calendario local (YYYY-MM-DD)
-          const fechaStrCalendario = `${anio}-${mes}-${dia}`;
-          
-          // Asignación de día operacional (El período nocturno 00:00 - 07:00 pertenece al Ln del día anterior)
-          let fechaStrOperacional = fechaStrCalendario;
-          if (hora < 7 || (hora === 7 && minuto === 0)) {
-            const fechaAyer = new Date(fechaObj);
-            fechaAyer.setDate(fechaAyer.getDate() - 1);
-            const aA = fechaAyer.getFullYear();
-            const mA = String(fechaAyer.getMonth() + 1).padStart(2, '0');
-            const dA = String(fechaAyer.getDate()).padStart(2, '0');
-            fechaStrOperacional = `${aA}-${mA}-${dA}`;
+            const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
+            const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
+            const lceqVal = (item.LCeq_1min && item.LCeq_1min > 10) ? item.LCeq_1min : null;
+
+            datosBrutosGlobales.push({
+              fechaObj: fechaObj,
+              timestamp: item.timestamp,
+              fechaStrCalendario: fechaStrCalendario,
+              fechaStrOperacional: fechaStrOperacional,
+              hora: fechaObj.getHours(),
+              minuto: fechaObj.getMinutes(),
+              LAeq_1min: laeqVal,
+              LAmax_1min: lamaxVal,
+              LCeq_1min: lceqVal
+            });
           }
-
-          datosBrutosGlobales.push({
-            timestamp: item.timestamp,
-            fechaObj,
-            fechaStrCalendario,
-            fechaStrOperacional,
-            hora,
-            minuto,
-            LAeq_1min: item.LAeq_1min !== undefined ? item.LAeq_1min : null,
-            LAmax_1min: item.LAmax_1min !== undefined ? item.LAmax_1min : null,
-            LCeq_1min: item.LCeq_1min !== undefined ? item.LCeq_1min : null
-          });
         });
 
-        // Ordenar cronológicamente
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
 
-        // Renderizado por defecto con la fecha más reciente registrada
         if (datosBrutosGlobales.length > 0) {
-          const ultimaFecha = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStrCalendario;
-          document.getElementById('filtro-fecha-diaria').value = ultimaFecha;
-          document.getElementById('filtro-fecha-ldln').value = ultimaFecha;
-          document.getElementById('filtro-mes-ldln').value = ultimaFecha.substring(0, 7);
+          const ultimaFechaStr = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStrOperacional;
           
-          renderizarVistaDiaria();
-          renderizarVistaLdLnDiaria();
-          renderizarVistaLdLnMensual();
-          renderizarVistaAnual();
+          if (!document.getElementById('filtro-fecha-1min').value) {
+            document.getElementById('filtro-fecha-1min').value = ultimaFechaStr;
+          }
+          if (!document.getElementById('filtro-fecha-ldln').value) {
+            document.getElementById('filtro-fecha-ldln').value = ultimaFechaStr;
+          }
+          if (!document.getElementById('filtro-mes-ldln').value) {
+            document.getElementById('filtro-mes-ldln').value = ultimaFechaStr.substring(0, 7);
+          }
         }
-      } catch (e) {
-        console.error("Error al procesar historial:", e);
+
+        renderizarVista1Min();
+        renderizarVistaLdLnDiaria();
+        renderizarVistaLdLnMensual();
+        renderizarVistaAnual();
+
+      } catch (err) {
+        console.error("Error al procesar historial:", err);
       }
     }
 
-    // Renderizar gráfico de 1 minuto para un día
-    function renderizarVistaDiaria() {
-      const fechaSel = document.getElementById('filtro-fecha-diaria').value;
-      if (!fechaSel) return;
+    function renderizarVista1Min() {
+      const fechaSel = document.getElementById('filtro-fecha-1min').value;
+      if (!fechaSel && modoPeriodo1Min === '1d') return;
 
-      const filtrados = datosBrutosGlobales.filter(d => d.fechaStrCalendario === fechaSel);
-      
-      const labels = filtrados.map(d => `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
-      const valores = filtrados.map(d => d.LAeq_1min);
+      let labels = [];
+      let laeqData = [];
+      let lamaxData = [];
 
-      chartDiario.data.labels = labels;
-      chartDiario.data.datasets[0].data = valores;
-      chartDiario.update();
+      if (modoPeriodo1Min === '1d') {
+        const mapaMinutos = new Map();
+        datosBrutosGlobales.forEach(d => {
+          if (d.fechaStrCalendario === fechaSel) {
+            const minKey = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
+            mapaMinutos.set(minKey, d);
+          }
+        });
+
+        for (let h = 0; h < 24; h++) {
+          for (let m = 0; m < 60; m++) {
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            labels.push(timeStr);
+            if (mapaMinutos.has(timeStr)) {
+              const reg = mapaMinutos.get(timeStr);
+              laeqData.push(reg.LAeq_1min);
+              lamaxData.push(reg.LAmax_1min);
+            } else {
+              laeqData.push(null);
+              lamaxData.push(null);
+            }
+          }
+        }
+      } else {
+        const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
+        const ahora = Date.now();
+        const tLimite = ahora - (diasLimite * 24 * 3600 * 1000);
+
+        const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
+
+        filtrados.forEach(d => {
+          labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
+          laeqData.push(d.LAeq_1min);
+          lamaxData.push(d.LAmax_1min);
+        });
+      }
+
+      chartHistorial1Min.data.labels = labels;
+      chartHistorial1Min.data.datasets[0].data = laeqData;
+      chartHistorial1Min.data.datasets[1].data = lamaxData;
+      chartHistorial1Min.update();
+
+      actualizarTarjetasSuperiores(laeqData, lamaxData);
     }
 
-    // Renderizar Ld y Ln para el día operacional seleccionado
+    function cambiarPeriodo1Min(periodo) {
+      modoPeriodo1Min = periodo;
+      ['1d', '7d', '30d'].forEach(p => {
+        const btn = document.getElementById(`btn-p-${p}`);
+        if (p === periodo) {
+          btn.className = "text-xs px-2.5 py-1 rounded font-medium transition bg-indigo-600 text-white";
+        } else {
+          btn.className = "text-xs px-2.5 py-1 rounded font-medium text-slate-400 hover:text-white transition";
+        }
+      });
+      renderizarVista1Min();
+    }
+
+    function actualizarTarjetasSuperiores(laeqArr, lamaxArr) {
+      const laeqValidos = laeqArr.filter(v => v !== null && v !== undefined && !isNaN(v));
+      const lamaxValidos = lamaxArr.filter(v => v !== null && v !== undefined && !isNaN(v));
+
+      if (laeqValidos.length === 0) {
+        document.getElementById('stat-min').innerText = "--.- dBA";
+        document.getElementById('stat-avg').innerText = "--.- dBA";
+        document.getElementById('stat-max').innerText = "--.- dBA";
+        document.getElementById('stat-count').innerText = "0";
+        document.getElementById('val-laeq1min').innerText = "--.- dBA";
+        return;
+      }
+
+      const minVal = Math.min(...laeqValidos);
+      const maxVal = Math.max(...lamaxValidos.length > 0 ? lamaxValidos : laeqValidos);
+      const avgVal = calcularLAeqPromedio(laeqValidos);
+
+      document.getElementById('stat-min').innerText = `${minVal.toFixed(1)} dBA`;
+      document.getElementById('stat-max').innerText = `${maxVal.toFixed(1)} dBA`;
+      document.getElementById('stat-avg').innerText = avgVal !== null ? `${avgVal.toFixed(1)} dBA` : "--.- dBA";
+      document.getElementById('stat-count').innerText = laeqValidos.length;
+      document.getElementById('val-laeq1min').innerText = `${laeqValidos[laeqValidos.length - 1].toFixed(1)} dBA`;
+    }
+
     function renderizarVistaLdLnDiaria() {
       const fechaSel = document.getElementById('filtro-fecha-ldln').value;
       if (!fechaSel) return;
@@ -400,165 +777,124 @@
         }
       });
 
-      const Ld = calcularLAeqPromedio(muestrasDia);
-      const Ln = calcularLAeqPromedio(muestrasNoche);
+      const ldVal = calcularLAeqPromedio(muestrasDia);
+      const lnVal = calcularLAeqPromedio(muestrasNoche);
 
-      chartLdLnDiaria.data.datasets[0].data = [
-        Ld !== null ? parseFloat(Ld.toFixed(1)) : null,
-        Ln !== null ? parseFloat(Ln.toFixed(1)) : null
-      ];
+      chartLdLnDiaria.data.datasets[0].data = [ldVal, lnVal];
       chartLdLnDiaria.update();
     }
 
-    // Renderizar gráfica mensual
     function renderizarVistaLdLnMensual() {
-      const mesSel = document.getElementById('filtro-mes-ldln').value;
+      const mesSel = document.getElementById('filtro-mes-ldln').value; // Formato "YYYY-MM"
       if (!mesSel) return;
 
-      const diasEnMes = new Map();
+      const agrupadoDias = new Map();
 
       datosBrutosGlobales.forEach(d => {
         if (d.fechaStrOperacional.startsWith(mesSel) && d.LAeq_1min !== null) {
-          if (!diasEnMes.has(d.fechaStrOperacional)) {
-            diasEnMes.set(d.fechaStrOperacional, { dia: [], noche: [] });
+          if (!agrupadoDias.has(d.fechaStrOperacional)) {
+            agrupadoDias.set(d.fechaStrOperacional, { dia: [], noche: [] });
           }
-          const datosDia = diasEnMes.get(d.fechaStrOperacional);
+          const itemDia = agrupadoDias.get(d.fechaStrOperacional);
           if (esHorarioDiurno(d.hora, d.minuto)) {
-            datosDia.dia.push(d.LAeq_1min);
+            itemDia.dia.push(d.LAeq_1min);
           } else {
-            datosDia.noche.push(d.LAeq_1min);
+            itemDia.noche.push(d.LAeq_1min);
           }
         }
       });
 
-      const fechasOrdenadas = Array.from(diasEnMes.keys()).sort();
       const labels = [];
-      const dataLd = [];
-      const dataLn = [];
+      const ldSeries = [];
+      const lnSeries = [];
 
-      fechasOrdenadas.forEach(fecha => {
-        labels.push(fecha.substring(8));
-        const grupo = diasEnMes.get(fecha);
-        const Ld = calcularLAeqPromedio(grupo.dia);
-        const Ln = calcularLAeqPromedio(grupo.noche);
-
-        dataLd.push(Ld !== null ? parseFloat(Ld.toFixed(1)) : null);
-        dataLn.push(Ln !== null ? parseFloat(Ln.toFixed(1)) : null);
+      Array.from(agrupadoDias.keys()).sort().forEach(fechaStr => {
+        const item = agrupadoDias.get(fechaStr);
+        labels.push(fechaStr.substring(8)); // Solo el número de día
+        ldSeries.push(calcularLAeqPromedio(item.dia));
+        lnSeries.push(calcularLAeqPromedio(item.noche));
       });
 
       chartLdLnMensual.data.labels = labels;
-      chartLdLnMensual.data.datasets[0].data = dataLd;
-      chartLdLnMensual.data.datasets[1].data = dataLn;
+      chartLdLnMensual.data.datasets[0].data = ldSeries;
+      chartLdLnMensual.data.datasets[1].data = lnSeries;
       chartLdLnMensual.update();
     }
 
-    // Renderizar gráfico anual
     function renderizarVistaAnual() {
       const anioSel = document.getElementById('filtro-anio').value;
       if (!anioSel) return;
 
-      const mesesData = Array.from({ length: 12 }, () => ({ dia: [], noche: [] }));
+      const mesesDia = Array.from({ length: 12 }, () => []);
+      const mesesNoche = Array.from({ length: 12 }, () => []);
 
       datosBrutosGlobales.forEach(d => {
         if (d.fechaStrOperacional.startsWith(anioSel) && d.LAeq_1min !== null) {
           const mesIdx = parseInt(d.fechaStrOperacional.substring(5, 7), 10) - 1;
-          if (mesIdx >= 0 && mesIdx < 12) {
-            if (esHorarioDiurno(d.hora, d.minuto)) {
-              mesesData[mesIdx].dia.push(d.LAeq_1min);
-            } else {
-              mesesData[mesIdx].noche.push(d.LAeq_1min);
-            }
+          if (esHorarioDiurno(d.hora, d.minuto)) {
+            mesesDia[mesIdx].push(d.LAeq_1min);
+          } else {
+            mesesNoche[mesIdx].push(d.LAeq_1min);
           }
         }
       });
 
-      const dataLdAnual = [];
-      const dataLnAnual = [];
+      const ldAnual = mesesDia.map(m => calcularLAeqPromedio(m));
+      const lnAnual = mesesNoche.map(m => calcularLAeqPromedio(m));
 
-      mesesData.forEach(m => {
-        const Ld = calcularLAeqPromedio(m.dia);
-        const Ln = calcularLAeqPromedio(m.noche);
-        dataLdAnual.push(Ld !== null ? parseFloat(Ld.toFixed(1)) : null);
-        dataLnAnual.push(Ln !== null ? parseFloat(Ln.toFixed(1)) : null);
-      });
-
-      chartAnual.data.datasets[0].data = dataLdAnual;
-      chartAnual.data.datasets[1].data = dataLnAnual;
+      chartAnual.data.datasets[0].data = ldAnual;
+      chartAnual.data.datasets[1].data = lnAnual;
       chartAnual.update();
     }
 
-    // Exportación a CSV
     function descargarCSVFiltrado() {
-      const fechaInicio = document.getElementById('export-inicio').value;
-      const fechaFin = document.getElementById('export-fin').value;
+      const desde = document.getElementById('export-inicio').value;
+      const hasta = document.getElementById('export-fin').value;
 
-      let filtrados = datosBrutosGlobales;
-
-      if (fechaInicio) {
-        filtrados = filtrados.filter(d => d.fechaStrCalendario >= fechaInicio);
-      }
-      if (fechaFin) {
-        filtrados = filtrados.filter(d => d.fechaStrCalendario <= fechaFin);
-      }
-
-      if (filtrados.length === 0) {
-        alert("No hay datos registrados en el rango de fechas seleccionado.");
+      if (!desde || !hasta) {
+        alert("Por favor selecciona un rango de fechas válido.");
         return;
       }
 
-      let csv = "Timestamp,Fecha_Hora_ISO,Fecha_Operacional,LAeq_1min_dBA,LAmax_1min_dBA,LCeq_1min_dBC\n";
+      const filtrados = datosBrutosGlobales.filter(d => 
+        d.fechaStrCalendario >= desde && d.fechaStrCalendario <= hasta
+      );
 
+      if (filtrados.length === 0) {
+        alert("No hay registros en el rango seleccionado.");
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,Timestamp,Fecha_Calendario,Fecha_Operacional,Hora,LAeq_1min,LAmax_1min,LCeq_1min\n";
       filtrados.forEach(d => {
-        const isoFecha = d.fechaObj.toISOString();
-        const laeq = d.LAeq_1min !== null ? d.LAeq_1min.toFixed(1) : "";
-        const lamax = d.LAmax_1min !== null ? d.LAmax_1min.toFixed(1) : "";
-        const lceq = d.LCeq_1min !== null ? d.LCeq_1min.toFixed(1) : "";
-        csv += `${d.timestamp},${isoFecha},${d.fechaStrOperacional},${laeq},${lamax},${lceq}\n`;
+        csvContent += `${d.timestamp},${d.fechaStrCalendario},${d.fechaStrOperacional},${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')},${d.LAeq_1min ?? ''},${d.LAmax_1min ?? ''},${d.LCeq_1min ?? ''}\n`;
       });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `monitoreo_acustico_neiva_${fechaInicio || 'inicio'}_a_${fechaFin || 'fin'}.csv`);
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `monitoreo_acustico_${desde}_a_${hasta}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     }
 
-    // Borrado de base de datos en Firebase
     async function borrarHistorialFirebase() {
-      const confirmacion = confirm("⚠️ ¿Estás seguro de que deseas eliminar permanentemente todo el historial de mediciones en Firebase?");
-      if (!confirmacion) return;
-
-      try {
-        const res = await fetch(URL_HISTORIAL, { method: 'DELETE' });
-        if (res.ok) {
-          alert("Historial eliminado con éxito.");
-          datosBrutosGlobales = [];
-          obtenerHistorial();
-        } else {
-          alert("Error al intentar eliminar el historial.");
+      if (confirm("¿Estás seguro de que deseas borrar todo el historial de mediciones en Firebase? Esta acción no se puede deshacer.")) {
+        try {
+          const response = await fetch(URL_HISTORIAL, { method: 'DELETE' });
+          if (response.ok) {
+            alert("Historial eliminado correctamente.");
+            obtenerHistorial();
+          } else {
+            alert("Ocurrió un error al intentar eliminar el historial.");
+          }
+        } catch (err) {
+          console.error("Error al borrar historial:", err);
+          alert("Error de conexión con Firebase.");
         }
-      } catch (err) {
-        console.error("Error al borrar historial:", err);
-        alert("Ocurrió un error de conexión al intentar borrar los datos.");
       }
     }
-
-    // Inicialización del sistema
-    window.addEventListener('DOMContentLoaded', () => {
-      initMap();
-      initCharts();
-      obtenerActual();
-      obtenerHistorial();
-
-      // Bucle de actualización en tiempo real (cada 2 segundos)
-      setInterval(obtenerActual, 2000);
-      
-      // Actualización de historial acumulado (cada 1 minuto)
-      setInterval(obtenerHistorial, 60000);
-    });
   </script>
 </body>
 </html>

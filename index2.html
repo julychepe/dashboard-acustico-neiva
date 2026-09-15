@@ -52,44 +52,52 @@
     </div>
   </header>
 
-  <!-- Principal -->
-<div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
-  <div>
-    <div class="flex justify-between items-center mb-2">
-      <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Último Minuto (1 min)</h2>
-      <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
-    </div>
-    <div class="flex items-baseline gap-2 mt-1">
-      <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
-      <span class="text-2xl font-bold text-slate-400">dBA</span>
-    </div>
-    <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo ($L_{\text{Aeq,1min}}$)</p>
-  </div>
-  <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-3 gap-2">
-    <div>
-      <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
-      <span id="val-lceq1s" class="text-sm font-bold text-slate-200">--.- dBC</span>
-    </div>
-    <div>
-      <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Mínimo</span>
-      <span id="stat-min" class="text-sm font-bold text-sky-400">--.- dBA</span>
-    </div>
-    <div>
-      <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Máximo</span>
-      <span id="stat-max" class="text-sm font-bold text-rose-400">--.- dBA</span>
-    </div>
-  </div>
-</div>
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+  <!-- Rejilla Principal: Distribuye 1 columna en móvil y 3 columnas en escritorio -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Mapa -->
-    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col">
-      <div class="flex justify-between items-center mb-3 px-1">
+    <!-- Tarjeta Principal (Ocupa 1 columna) -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Último Minuto (1 min)</h2>
+          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
+        </div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
+          <span class="text-2xl font-bold text-slate-400">dBA</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo (L<sub>Aeq,1min</sub>)</p>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-3 gap-2">
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
+          <span id="val-lceq1s" class="text-sm font-bold text-slate-200">--.- dBC</span>
+        </div>
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Mínimo</span>
+          <span id="stat-min" class="text-sm font-bold text-sky-400">--.- dBA</span>
+        </div>
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Máximo</span>
+          <span id="stat-max" class="text-sm font-bold text-rose-400">--.- dBA</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mapa (Ocupa las 2 columnas restantes) -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      <div class="flex justify-between items-center mb-3">
         <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
         <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
       </div>
-      <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
+      <div id="mapa" class="w-full h-56 sm:h-64 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
     </div>
 
+  </div>
+</main>
+  
     <!-- 1. GRÁFICA DE EVOLUCIÓN TEMPORAL DE RUIDO AMBIENTAL -->
     <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">

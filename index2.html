@@ -11,9 +11,12 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@2.2.1"></script>
+
+  <!-- SDKs de Firebase v8 -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
-
   <!-- Header -->
   <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-50">
     <div class="max-w-6xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
@@ -34,7 +37,6 @@
           <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
           <span id="texto-estado">Verificando...</span>
         </span>
-
         <div class="flex items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
           <span class="text-[11px] text-slate-400 pl-1">Desde:</span>
           <input type="date" id="export-inicio" class="bg-slate-800 border border-slate-600 text-xs text-slate-200 rounded px-1.5 py-1 focus:outline-none focus:border-indigo-500">
@@ -45,8 +47,7 @@
             📥 CSV
           </button>
         </div>
-
-        <button onclick="borrarHistorialFirebase()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1">
+        <button onclick="borrarHistorialFirebaseSeguro()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1">
           🗑️ Borrar Historial
         </button>
       </div>
@@ -55,10 +56,8 @@
 
   <!-- Principal -->
   <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
-
     <!-- Fila 1: Métricas + Mapa -->
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
       <!-- Tarjeta Lectura Instantánea / Último Minuto -->
       <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
         <div>
@@ -96,7 +95,6 @@
         </div>
         <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
       </div>
-
     </div>
 
     <!-- Fila 2: Gráfica de Evolución Temporal -->
@@ -186,11 +184,78 @@
         <canvas id="graficaAnual"></canvas>
       </div>
     </div>
-
   </main>
 
   <script>
     const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
+
+    // ==========================================
+    // CONFIGURACIÓN E INICIALIZACIÓN FIREBASE
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "mLGnoEcMzIU2P1DaQXzwfjlJZAn2", // Sustituye por tu clave API real
+      authDomain: "acustica-neiva-default-rtdb.firebaseapp.com",
+      databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
+      projectId: "acustica-neiva-default-rtdb"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    async function iniciarSesionAdmin() {
+      const email = prompt("Correo de Administrador:");
+      const password = prompt("Contraseña:");
+
+      if (!email || !password) return;
+
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        alert(`✅ Sesión iniciada como: ${userCredential.user.email}`);
+      } catch (error) {
+        alert(`❌ Error al iniciar sesión: ${error.message}`);
+      }
+    }
+
+    async function borrarHistorialFirebaseSeguro() {
+      const usuarioActual = auth.currentUser;
+
+      if (!usuarioActual) {
+        const deseaIniciar = confirm("🔒 Esta acción requiere privilegios de administrador. ¿Deseas iniciar sesión?");
+        if (deseaIniciar) {
+          await iniciarSesionAdmin();
+        }
+        return;
+      }
+
+      const confirmacion = confirm(`⚠️ Hola ${usuarioActual.email}, estás a punto de BORRAR TODO el historial. ¿Confirmar?`);
+      if (!confirmacion) return;
+
+      try {
+        const token = await usuarioActual.getIdToken();
+        const urlConAuth = `${URL_HISTORIAL}?auth=${token}`;
+
+        const respuesta = await fetch(urlConAuth, { method: 'DELETE' });
+
+        if (respuesta.ok) {
+          alert("✅ El historial se eliminó correctamente.");
+          datosBrutosGlobales = [];
+          actualizarTarjetaPrincipal(null);
+          renderizarVista1Min();
+          renderizarVistaLdLnDiaria();
+          renderizarVistaLdLnMensual();
+          renderizarVistaAnual();
+        } else {
+          alert("❌ Error: No tienes permisos para borrar estos datos.");
+        }
+      } catch (error) {
+        console.error("Error al borrar:", error);
+        alert("❌ Ocurrió un error al intentar eliminar los registros.");
+      }
+    }
+
+    // ==========================================
+    // VARIABLES Y LÓGICA DEL DASHBOARD
+    // ==========================================
     let mapa, marcador;
     let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
     let datosBrutosGlobales = [];
@@ -439,16 +504,13 @@
     function actualizarTarjetaPrincipal(ultimo) {
       const elLaeq = document.getElementById('val-laeq1s');
       const elLceq = document.getElementById('val-lceq1s');
-
       if (ultimo && ultimo.LAeq_1min !== null && !isNaN(ultimo.LAeq_1min)) {
         elLaeq.innerText = ultimo.LAeq_1min.toFixed(1);
-
         if (ultimo.LCeq_1min !== null && !isNaN(ultimo.LCeq_1min)) {
           elLceq.innerText = `${ultimo.LCeq_1min.toFixed(1)} dBC`;
         } else {
           elLceq.innerText = "--.- dBC";
         }
-
         if (ultimo.lat && ultimo.lng && marcador) {
           marcador.setLatLng([ultimo.lat, ultimo.lng]);
           document.getElementById('coords-text').innerText = `${Number(ultimo.lat).toFixed(6)}, ${Number(ultimo.lng).toFixed(6)}`;
@@ -462,7 +524,6 @@
     function verificarEstadoConexion() {
       const ahoraMs = Date.now();
       const diferenciaSegundos = (ahoraMs - ultimoRegistroTimestampMs) / 1000;
-
       if (ultimoRegistroTimestampMs > 0 && diferenciaSegundos <= 120) {
         actualizarBadgeEstado(true);
       } else {
@@ -499,10 +560,8 @@
           verificarEstadoConexion();
           return;
         }
-
         datosBrutosGlobales = [];
         let maxTimestamp = 0;
-
         Object.keys(data).forEach(key => {
           const item = data[key];
           if (item && item.timestamp && item.timestamp > 0) {
@@ -512,15 +571,12 @@
             const dia = String(fechaObj.getDate()).padStart(2, '0');
             const fechaStrCalendario = `${anio}-${mes}-${dia}`;
             const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
-
             const laeqVal = (item.LAeq_1min !== undefined && item.LAeq_1min !== null) ? Number(item.LAeq_1min) : null;
             const lamaxVal = (item.LAmax_1min !== undefined && item.LAmax_1min !== null) ? Number(item.LAmax_1min) : null;
             const lceqVal = (item.LCeq_1min !== undefined && item.LCeq_1min !== null) ? Number(item.LCeq_1min) : null;
-
             if (item.timestamp > maxTimestamp) {
               maxTimestamp = item.timestamp;
             }
-
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
@@ -536,17 +592,13 @@
             });
           }
         });
-
         if (maxTimestamp > 0) {
           ultimoRegistroTimestampMs = maxTimestamp * 1000;
         }
-
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
-
         if (datosBrutosGlobales.length > 0) {
           const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
           actualizarTarjetaPrincipal(ultimoRegistro);
-
           const ultimaFechaStr = ultimoRegistro.fechaStrOperacional;
           if (!document.getElementById('filtro-fecha-1min').value) {
             document.getElementById('filtro-fecha-1min').value = ultimaFechaStr;
@@ -560,13 +612,11 @@
         } else {
           actualizarTarjetaPrincipal(null);
         }
-
         renderizarVista1Min();
         renderizarVistaLdLnDiaria();
         renderizarVistaLdLnMensual();
         renderizarVistaAnual();
         verificarEstadoConexion();
-
       } catch (err) {
         console.error("Error al procesar historial:", err);
         verificarEstadoConexion();
@@ -576,11 +626,9 @@
     function renderizarVista1Min() {
       const fechaSel = document.getElementById('filtro-fecha-1min').value;
       if (!fechaSel && modoPeriodo1Min === '1d') return;
-
       let labels = [];
       let laeqData = [];
       let lamaxData = [];
-
       if (modoPeriodo1Min === '1d') {
         const datosDelDia = datosBrutosGlobales.filter(d => d.fechaStrCalendario === fechaSel);
         
@@ -594,19 +642,16 @@
         const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
         const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);
         const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
-
         filtrados.forEach(d => {
           labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
           laeqData.push(d.LAeq_1min);
           lamaxData.push(d.LAmax_1min);
         });
       }
-
       chartHistorial1Min.data.labels = labels;
       chartHistorial1Min.data.datasets[0].data = laeqData;
       chartHistorial1Min.data.datasets[1].data = lamaxData;
       chartHistorial1Min.update();
-
       actualizarTarjetasSuperiores(laeqData, lamaxData);
     }
 
@@ -626,16 +671,13 @@
     function actualizarTarjetasSuperiores(laeqArr, lamaxArr) {
       const laeqValidos = laeqArr.filter(v => v !== null && v !== undefined && !isNaN(v));
       const lamaxValidos = lamaxArr.filter(v => v !== null && v !== undefined && !isNaN(v));
-
       if (laeqValidos.length === 0) {
         document.getElementById('stat-min').innerText = "--.- dBA";
         document.getElementById('stat-max').innerText = "--.- dBA";
         return;
       }
-
       const minVal = Math.min(...laeqValidos);
       const maxVal = Math.max(...lamaxValidos.length > 0 ? lamaxValidos : laeqValidos);
-
       document.getElementById('stat-min').innerText = `${minVal.toFixed(1)} dBA`;
       document.getElementById('stat-max').innerText = `${maxVal.toFixed(1)} dBA`;
     }
@@ -643,10 +685,8 @@
     function renderizarVistaLdLnDiaria() {
       const fechaSel = document.getElementById('filtro-fecha-ldln').value;
       if (!fechaSel) return;
-
       const muestrasDia = [];
       const muestrasNoche = [];
-
       datosBrutosGlobales.forEach(d => {
         if (d.fechaStrOperacional === fechaSel && d.LAeq_1min !== null) {
           if (esHorarioDiurno(d.hora, d.minuto)) {
@@ -656,10 +696,8 @@
           }
         }
       });
-
       const Ld = calcularLAeqPromedio(muestrasDia);
       const Ln = calcularLAeqPromedio(muestrasNoche);
-
       chartLdLnDiaria.data.datasets[0].data = [Ld, Ln];
       chartLdLnDiaria.update();
     }
@@ -667,23 +705,18 @@
     function renderizarVistaLdLnMensual() {
       const mesSel = document.getElementById('filtro-mes-ldln').value;
       if (!mesSel) return;
-
       const [anioStr, mesStr] = mesSel.split('-');
       const anio = parseInt(anioStr);
       const mes = parseInt(mesStr);
-
       const diasEnMes = new Date(anio, mes, 0).getDate();
       const labels = [];
       const ldArr = [];
       const lnArr = [];
-
       for (let dia = 1; dia <= diasEnMes; dia++) {
         const diaStr = `${mesSel}-${String(dia).padStart(2, '0')}`;
         labels.push(String(dia).padStart(2, '0'));
-
         const muestrasDia = [];
         const muestrasNoche = [];
-
         datosBrutosGlobales.forEach(d => {
           if (d.fechaStrOperacional === diaStr && d.LAeq_1min !== null) {
             if (esHorarioDiurno(d.hora, d.minuto)) {
@@ -693,11 +726,9 @@
             }
           }
         });
-
         ldArr.push(calcularLAeqPromedio(muestrasDia));
         lnArr.push(calcularLAeqPromedio(muestrasNoche));
       }
-
       chartLdLnMensual.data.labels = labels;
       chartLdLnMensual.data.datasets[0].data = ldArr;
       chartLdLnMensual.data.datasets[1].data = lnArr;
@@ -708,11 +739,9 @@
       const anioSel = parseInt(document.getElementById('filtro-anio').value);
       const muestrasDiaMeses = Array(12).fill(null).map(() => []);
       const muestrasNocheMeses = Array(12).fill(null).map(() => []);
-
       datosBrutosGlobales.forEach(d => {
         const anioOp = parseInt(d.fechaStrOperacional.split('-')[0]);
         const mesOp = parseInt(d.fechaStrOperacional.split('-')[1]) - 1;
-
         if (anioOp === anioSel && d.LAeq_1min !== null) {
           if (esHorarioDiurno(d.hora, d.minuto)) {
             muestrasDiaMeses[mesOp].push(d.LAeq_1min);
@@ -721,10 +750,8 @@
           }
         }
       });
-
       const ldMensual = muestrasDiaMeses.map(m => calcularLAeqPromedio(m));
       const lnMensual = muestrasNocheMeses.map(m => calcularLAeqPromedio(m));
-
       chartAnual.data.datasets[0].data = ldMensual;
       chartAnual.data.datasets[1].data = lnMensual;
       chartAnual.update();
@@ -735,12 +762,9 @@
         alert("No hay datos históricos disponibles para exportar.");
         return;
       }
-
       const fInicio = document.getElementById('export-inicio').value;
       const fFin = document.getElementById('export-fin').value;
-
       let datosFiltrados = datosBrutosGlobales;
-
       if (fInicio || fFin) {
         datosFiltrados = datosBrutosGlobales.filter(d => {
           if (fInicio && d.fechaStrOperacional < fInicio) return false;
@@ -748,23 +772,18 @@
           return true;
         });
       }
-
       if (datosFiltrados.length === 0) {
         alert("No se encontraron registros dentro del rango de fechas seleccionado.");
         return;
       }
-
       let csvContent = "data:text/csv;charset=utf-8,Timestamp,Fecha_Calendario,Fecha_Operacional,Hora,LAeq_1min,LAmax_1min,LCeq_1min\n";
-
       datosFiltrados.forEach(d => {
         const horaStr = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}:00`;
         const laeq = d.LAeq_1min !== null ? d.LAeq_1min.toFixed(2) : "";
         const lamax = d.LAmax_1min !== null ? d.LAmax_1min.toFixed(2) : "";
         const lceq = d.LCeq_1min !== null ? d.LCeq_1min.toFixed(2) : "";
-
         csvContent += `${d.timestamp},${d.fechaStrCalendario},${d.fechaStrOperacional},${horaStr},${laeq},${lamax},${lceq}\n`;
       });
-
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
@@ -774,35 +793,11 @@
       document.body.removeChild(link);
     }
 
-    async function borrarHistorialFirebase() {
-      const confirmacion = confirm("⚠️ ¿Estás seguro de que deseas eliminar permanentemente todo el historial de mediciones de Firebase?");
-      if (!confirmacion) return;
-
-      try {
-        const respuesta = await fetch(URL_HISTORIAL, { method: 'DELETE' });
-        if (respuesta.ok) {
-          alert("El historial se eliminó correctamente de Firebase.");
-          datosBrutosGlobales = [];
-          actualizarTarjetaPrincipal(null);
-          renderizarVista1Min();
-          renderizarVistaLdLnDiaria();
-          renderizarVistaLdLnMensual();
-          renderizarVistaAnual();
-        } else {
-          alert("No se pudo eliminar el historial. Verifica las reglas de Firebase.");
-        }
-      } catch (error) {
-        console.error("Error al eliminar los datos:", error);
-        alert("Ocurrió un error al intentar comunicar con Firebase.");
-      }
-    }
-
     window.addEventListener('DOMContentLoaded', () => {
       initMap();
       initCharts();
       obtenerHistorial();
       
-      // Actualiza cada 5 segundos leyendo directamente el historial de Firebase
       setInterval(obtenerHistorial, 5000);
       setInterval(verificarEstadoConexion, 5000);
     });

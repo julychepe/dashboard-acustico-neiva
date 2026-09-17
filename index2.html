@@ -798,12 +798,29 @@
       let labels = [], laeqData = [], lamaxData = [];
 
       if (modoPeriodo1Min === '1d') {
-        const datosDelDia = datosBrutosGlobales.filter(d => d.fechaStrCalendario === fechaSel);
-        datosDelDia.forEach(d => {
-          labels.push(`${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
-          laeqData.push(d.LAeq_1min);
-          lamaxData.push(d.LAmax_1min);
+        const mapaMuestras = {};
+        datosBrutosGlobales.forEach(d => {
+          if (d.fechaStrCalendario === fechaSel) {
+            const horaClave = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
+            mapaMuestras[horaClave] = d;
+          }
         });
+
+        // Rellena la plantilla diaria de 1,440 minutos para mostrar eje de 00:00 a 23:59
+        for (let h = 0; h < 24; h++) {
+          for (let m = 0; m < 60; m++) {
+            const horaFormateada = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            labels.push(horaFormateada);
+            
+            if (mapaMuestras[horaFormateada]) {
+              laeqData.push(mapaMuestras[horaFormateada].LAeq_1min);
+              lamaxData.push(mapaMuestras[horaFormateada].LAmax_1min);
+            } else {
+              laeqData.push(null);
+              lamaxData.push(null);
+            }
+          }
+        }
       } else {
         const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
         const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);

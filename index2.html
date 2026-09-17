@@ -16,7 +16,7 @@
 
   <!-- Header -->
   <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-50">
-    <div class="max-w-6xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+    <div class="max-w-7xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
       <div class="flex items-center gap-3">
         <div class="p-2.5 bg-indigo-600 rounded-xl shadow-inner">
           <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -32,9 +32,10 @@
       <div class="flex flex-wrap items-center gap-3">
         <span id="badge-estado" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-slate-700 text-slate-300 border border-slate-600 transition-colors">
           <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
-          <span id="texto-estado">Verificando...</span>
+          <span id="texto-estado">Conectando...</span>
         </span>
 
+        <!-- Filtro Rango de Fechas para Descarga -->
         <div class="flex items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
           <span class="text-[11px] text-slate-400 pl-1">Desde:</span>
           <input type="date" id="export-inicio" class="bg-slate-800 border border-slate-600 text-xs text-slate-200 rounded px-1.5 py-1 focus:outline-none focus:border-indigo-500">
@@ -46,6 +47,7 @@
           </button>
         </div>
 
+        <!-- Botón para Borrar Historial Firebase -->
         <button onclick="borrarHistorialFirebase()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs px-3 py-2 rounded-lg font-medium transition flex items-center gap-1">
           🗑️ Borrar Historial
         </button>
@@ -54,53 +56,65 @@
   </header>
 
   <!-- Principal -->
-  <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-    <!-- Fila 1: Métricas + Mapa -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      
-      <!-- Tarjeta Lectura Instantánea / Último Minuto -->
-      <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+    <!-- Tarjeta Lectura Instantánea -->
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Tiempo Real (2s)</h2>
+          <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
+        </div>
+        <div class="flex items-baseline gap-2 mt-1">
+          <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
+          <span class="text-2xl font-bold text-slate-400">dBA</span>
+        </div>
+        <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo (LAeq,1s)</p>
+      </div>
+
+      <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-2 gap-4">
         <div>
-          <div class="flex justify-between items-center mb-2">
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Último Minuto (1 min)</h2>
-            <span class="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300 font-mono">EN VIVO</span>
-          </div>
-          <div class="flex items-baseline gap-2 mt-1">
-            <span id="val-laeq1s" class="text-6xl font-black text-indigo-400 tracking-tight">--.-</span>
-            <span class="text-2xl font-bold text-slate-400">dBA</span>
-          </div>
-          <p class="text-xs text-slate-400 mt-2">Nivel sonoro equivalente continuo (L<sub>Aeq,1min</sub>)</p>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
+          <span id="val-lceq1s" class="text-base font-bold text-slate-200">--.- dBC</span>
         </div>
-        <div class="mt-6 pt-4 border-t border-slate-700/80 grid grid-cols-3 gap-2">
-          <div>
-            <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Ponderación C</span>
-            <span id="val-lceq1s" class="text-sm font-bold text-slate-200">--.- dBC</span>
-          </div>
-          <div>
-            <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Mínimo</span>
-            <span id="stat-min" class="text-sm font-bold text-sky-400">--.- dBA</span>
-          </div>
-          <div>
-            <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Máximo</span>
-            <span id="stat-max" class="text-sm font-bold text-rose-400">--.- dBA</span>
-          </div>
+        <div>
+          <span class="text-[11px] text-slate-400 uppercase font-semibold block mb-0.5">Último Minuto</span>
+          <span id="val-laeq1min" class="text-base font-bold text-emerald-400">--.- dBA</span>
         </div>
       </div>
-
-      <!-- Mapa -->
-      <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
-        <div class="flex justify-between items-center mb-3 px-1">
-          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
-          <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
-        </div>
-        <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
-      </div>
-
     </div>
 
-    <!-- Fila 2: Gráfica de Evolución Temporal -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+    <!-- Mapa -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col">
+      <div class="flex justify-between items-center mb-3 px-1">
+        <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
+        <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+      </div>
+      <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
+    </div>
+
+    <!-- Tarjetas de Métricas del Día -->
+    <div class="lg:col-span-3 grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Mínimo Registrado</span>
+        <span id="stat-min" class="text-2xl font-bold text-sky-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">LAeq promedio</span>
+        <span id="stat-avg" class="text-2xl font-bold text-indigo-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Máximo Registrado</span>
+        <span id="stat-max" class="text-2xl font-bold text-rose-400 mt-1 block">--.- dBA</span>
+      </div>
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow">
+        <span class="text-xs text-slate-400 block font-medium">Total Muestras (1min)</span>
+        <span id="stat-count" class="text-2xl font-bold text-emerald-400 mt-1 block">0</span>
+      </div>
+    </div>
+
+    <!-- 1. GRÁFICA DE EVOLUCIÓN TEMPORAL DE RUIDO AMBIENTAL -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h2 class="text-base font-bold text-slate-100">Evolución temporal del ruido ambiental</h2>
@@ -123,52 +137,49 @@
       </div>
     </div>
 
-    <!-- Fila 3: Gráficas Diaria y Mensual -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Gráfica Diaria Ld / Ln -->
-      <div class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
-        <div>
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-slate-100">Niveles día y noche</h2>
-              <p class="text-xs text-slate-400">Indicadores Ld y Ln (Res. 0627/2006)</p>
-            </div>
-            <input type="date" id="filtro-fecha-ldln" onchange="renderizarVistaLdLnDiaria()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
+    <!-- 2. GRÁFICA DIARIA Ld / Ln -->
+    <div class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Niveles día y noche</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln (Res. 0627/2006)</p>
           </div>
-          <div class="relative h-64 w-full">
-            <canvas id="graficaLdLnDiaria"></canvas>
-          </div>
+          <input type="date" id="filtro-fecha-ldln" onchange="renderizarVistaLdLnDiaria()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2 py-1 focus:outline-none focus:border-indigo-500">
         </div>
-        <div class="mt-4 pt-3 border-t border-slate-700 text-center text-xs text-slate-400 font-mono">
-          <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00 (+1d)</span>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnDiaria"></canvas>
         </div>
       </div>
-
-      <!-- Gráfica Mensual Ld / Ln -->
-      <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
-        <div>
-          <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-            <div>
-              <h2 class="text-base font-bold text-slate-100">Evolución mensual de Ld y Ln</h2>
-              <p class="text-xs text-slate-400">Indicadores Ld y Ln consolidados por fecha operacional</p>
-            </div>
-            <div class="flex items-center gap-2">
-              <input type="month" id="filtro-mes-ldln" onchange="renderizarVistaLdLnMensual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
-            </div>
-          </div>
-          <div class="relative h-64 w-full">
-            <canvas id="graficaLdLnMensual"></canvas>
-          </div>
-        </div>
-        <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
-          <span>Valores consolidados por período operacional</span>
-          <span class="font-mono text-[11px]">Ld / Ln [dBA]</span>
-        </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 text-center text-xs text-slate-400 font-mono">
+        <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00 (+1d)</span>
       </div>
     </div>
 
-    <!-- Fila 4: Gráfica Anual -->
-    <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
+    <!-- 3. GRÁFICA MENSUAL DE Ld Y Ln -->
+    <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
+      <div>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+          <div>
+            <h2 class="text-base font-bold text-slate-100">Evolución mensual de Ld y Ln</h2>
+            <p class="text-xs text-slate-400">Indicadores Ld y Ln consolidados por fecha operacional</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <input type="month" id="filtro-mes-ldln" onchange="renderizarVistaLdLnMensual()" class="bg-slate-900 border border-slate-700 text-xs text-slate-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="relative h-64 w-full">
+          <canvas id="graficaLdLnMensual"></canvas>
+        </div>
+      </div>
+      <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center text-xs text-slate-400">
+        <span>Valores consolidados por período operacional</span>
+        <span class="font-mono text-[11px]">Ld / Ln [dBA]</span>
+      </div>
+    </div>
+
+    <!-- 4. GRÁFICA ANUAL DE EVOLUCIÓN HISTÓRICA -->
+    <div class="lg:col-span-3 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
         <div>
           <h2 class="text-base font-bold text-slate-100">Evolución anual de Ld y Ln</h2>
@@ -190,11 +201,13 @@
   </main>
 
   <script>
+    const URL_ACTUAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/actual.json";
     const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
+
     let mapa, marcador;
     let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
     let datosBrutosGlobales = [];
-    let ultimoRegistroTimestampMs = 0;
+    let ultimaRespuestaTime = 0;
     let modoPeriodo1Min = '1d';
 
     Chart.register(ChartDataLabels);
@@ -204,17 +217,15 @@
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
       }).addTo(mapa);
+
       marcador = L.marker([lat, lng]).addTo(mapa)
         .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa.')
         .openPopup();
     }
 
     function initCharts() {
+      // 1. Gráfica 1 Minuto
       const ctx1 = document.getElementById('graficaAcustica').getContext('2d');
-      const gradienteLaeq = ctx1.createLinearGradient(0, 0, 0, 300);
-      gradienteLaeq.addColorStop(0, 'rgba(129, 140, 248, 0.15)');
-      gradienteLaeq.addColorStop(1, 'rgba(129, 140, 248, 0.0)');
-
       chartHistorial1Min = new Chart(ctx1, {
         type: 'line',
         data: {
@@ -224,13 +235,12 @@
               label: 'LAeq,1min [dBA]',
               data: [],
               borderColor: '#818cf8',
-              backgroundColor: gradienteLaeq,
-              borderWidth: 1.8,
+              backgroundColor: 'rgba(129, 140, 248, 0.12)',
+              borderWidth: 2,
               fill: true,
-              pointRadius: 0,
-              pointHoverRadius: 4,
+              pointRadius: 1,
               spanGaps: false,
-              tension: 0.35
+              tension: 0.15
             },
             {
               label: 'LAmax,1min [dBA]',
@@ -240,33 +250,18 @@
               borderDash: [3, 3],
               fill: false,
               pointRadius: 0,
-              pointHoverRadius: 4,
               spanGaps: false,
-              tension: 0.35
+              tension: 0.15
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
           scales: {
             x: {
               grid: { color: '#334155' },
-              ticks: { 
-                color: '#94a3b8', 
-                font: { size: 10 },
-                callback: function(val, index) {
-                  const label = this.getLabelForValue(val);
-                  if (!label) return '';
-                  const horaStr = label.split(' ').pop(); 
-                  const [hh, mm] = horaStr.split(':');
-                  if (mm === '00' && parseInt(hh) % 3 === 0) {
-                    return horaStr;
-                  }
-                  return null;
-                }
-              }
+              ticks: { color: '#94a3b8', maxTicksLimit: 25, font: { size: 10 } }
             },
             y: {
               grid: { color: '#334155' },
@@ -277,12 +272,12 @@
           },
           plugins: {
             legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
-            datalabels: { display: false },
-            tooltip: { enabled: true, mode: 'index', intersect: false }
+            datalabels: { display: false }
           }
         }
       });
 
+      // 2. Gráfica Diaria Ld / Ln
       const ctx2 = document.getElementById('graficaLdLnDiaria').getContext('2d');
       chartLdLnDiaria = new Chart(ctx2, {
         type: 'bar',
@@ -316,12 +311,40 @@
             annotation: {
               annotations: {
                 limiteLd: {
-                  type: 'line', yMin: 65, yMax: 65, xMin: -0.4, xMax: 0.4, borderColor: '#f87171', borderWidth: 2, borderDash: [5, 5],
-                  label: { display: true, content: 'Límite Día (65 dBA)', position: 'end', backgroundColor: 'rgba(239, 68, 68, 0.8)', color: '#fff', font: { size: 9, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  xMin: -0.4,
+                  xMax: 0.4,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Día (65 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
                 },
                 limiteLn: {
-                  type: 'line', yMin: 50, yMax: 50, xMin: 0.6, xMax: 1.4, borderColor: '#38bdf8', borderWidth: 2, borderDash: [5, 5],
-                  label: { display: true, content: 'Límite Noche (50 dBA)', position: 'end', backgroundColor: 'rgba(56, 189, 248, 0.8)', color: '#fff', font: { size: 9, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  xMin: 0.6,
+                  xMax: 1.4,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [5, 5],
+                  label: {
+                    display: true,
+                    content: 'Límite Noche (50 dBA)',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
                 }
               }
             }
@@ -329,14 +352,31 @@
         }
       });
 
+      // 3. Gráfica Mensual Ld / Ln
       const ctx3 = document.getElementById('graficaLdLnMensual').getContext('2d');
       chartLdLnMensual = new Chart(ctx3, {
         type: 'line',
         data: {
           labels: [],
           datasets: [
-            { label: 'Ld [dBA]', data: [], borderColor: '#fb923c', backgroundColor: 'rgba(251, 146, 60, 0.2)', borderWidth: 2, pointRadius: 3, spanGaps: false },
-            { label: 'Ln [dBA]', data: [], borderColor: '#818cf8', backgroundColor: 'rgba(129, 140, 248, 0.2)', borderWidth: 2, pointRadius: 3, spanGaps: false }
+            {
+              label: 'Ld [dBA]',
+              data: [],
+              borderColor: '#fb923c',
+              backgroundColor: 'rgba(251, 146, 60, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            },
+            {
+              label: 'Ln [dBA]',
+              data: [],
+              borderColor: '#818cf8',
+              backgroundColor: 'rgba(129, 140, 248, 0.2)',
+              borderWidth: 2,
+              pointRadius: 3,
+              spanGaps: false
+            }
           ]
         },
         options: {
@@ -352,12 +392,36 @@
             annotation: {
               annotations: {
                 limiteLd: {
-                  type: 'line', yMin: 65, yMax: 65, borderColor: '#f87171', borderWidth: 2, borderDash: [4, 4],
-                  label: { display: true, content: 'Límite Ld: 65 dBA', position: 'start', backgroundColor: 'rgba(239, 68, 68, 0.8)', color: '#fff', font: { size: 10, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
                 },
                 limiteLn: {
-                  type: 'line', yMin: 50, yMax: 50, borderColor: '#38bdf8', borderWidth: 2, borderDash: [4, 4],
-                  label: { display: true, content: 'Límite Ln: 50 dBA', position: 'end', backgroundColor: 'rgba(56, 189, 248, 0.8)', color: '#fff', font: { size: 10, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 10, weight: 'bold' }
+                  }
                 }
               }
             }
@@ -365,14 +429,29 @@
         }
       });
 
+      // 4. Gráfica Anual de Ld y Ln por mes
       const ctx4 = document.getElementById('graficaAnual').getContext('2d');
       chartAnual = new Chart(ctx4, {
         type: 'bar',
         data: {
           labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'],
           datasets: [
-            { label: 'Ld,mes [dBA]', data: Array(12).fill(null), backgroundColor: 'rgba(251, 146, 60, 0.85)', borderColor: '#fb923c', borderWidth: 1, borderRadius: 6 },
-            { label: 'Ln,mes [dBA]', data: Array(12).fill(null), backgroundColor: 'rgba(99, 102, 241, 0.85)', borderColor: '#6366f1', borderWidth: 1, borderRadius: 6 }
+            {
+              label: 'Ld,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(251, 146, 60, 0.85)',
+              borderColor: '#fb923c',
+              borderWidth: 1,
+              borderRadius: 6
+            },
+            {
+              label: 'Ln,mes [dBA]',
+              data: Array(12).fill(null),
+              backgroundColor: 'rgba(99, 102, 241, 0.85)',
+              borderColor: '#6366f1',
+              borderWidth: 1,
+              borderRadius: 6
+            }
           ]
         },
         options: {
@@ -385,18 +464,45 @@
           plugins: {
             legend: { labels: { color: '#e2e8f0' } },
             datalabels: {
-              anchor: 'end', align: 'top', color: '#cbd5e1', font: { size: 9, weight: 'bold' },
+              anchor: 'end',
+              align: 'top',
+              color: '#cbd5e1',
+              font: { size: 9, weight: 'bold' },
               formatter: (val) => val !== null && val !== undefined ? `${val.toFixed(1)}` : ''
             },
             annotation: {
               annotations: {
                 limiteLdAnual: {
-                  type: 'line', yMin: 65, yMax: 65, borderColor: '#f87171', borderWidth: 1.5, borderDash: [4, 4],
-                  label: { display: true, content: 'Límite Ld: 65 dBA', position: 'start', backgroundColor: 'rgba(239, 68, 68, 0.8)', color: '#fff', font: { size: 9, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 65,
+                  yMax: 65,
+                  borderColor: '#f87171',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ld: 65 dBA',
+                    position: 'start',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
                 },
                 limiteLnAnual: {
-                  type: 'line', yMin: 50, yMax: 50, borderColor: '#38bdf8', borderWidth: 1.5, borderDash: [4, 4],
-                  label: { display: true, content: 'Límite Ln: 50 dBA', position: 'end', backgroundColor: 'rgba(56, 189, 248, 0.8)', color: '#fff', font: { size: 9, weight: 'bold' } }
+                  type: 'line',
+                  yMin: 50,
+                  yMax: 50,
+                  borderColor: '#38bdf8',
+                  borderWidth: 1.5,
+                  borderDash: [4, 4],
+                  label: {
+                    display: true,
+                    content: 'Límite Ln: 50 dBA',
+                    position: 'end',
+                    backgroundColor: 'rgba(56, 189, 248, 0.8)',
+                    color: '#fff',
+                    font: { size: 9, weight: 'bold' }
+                  }
                 }
               }
             }
@@ -405,6 +511,7 @@
       });
     }
 
+    // Promedio Logarítmico (Suma energética)
     function calcularLAeqPromedio(valores) {
       const validos = valores.filter(v => v !== null && v !== undefined && !isNaN(v) && v > 10);
       if (validos.length === 0) return null;
@@ -412,61 +519,59 @@
       return 10 * Math.log10(sumaEnergetica / validos.length);
     }
 
+    // Retorna la fecha operacional ajustada a la noche (+1 día en madrugada)
     function obtenerFechaOperacional(fechaObj) {
       const anio = fechaObj.getFullYear();
       const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
       const dia = String(fechaObj.getDate()).padStart(2, '0');
+      
       const hora = fechaObj.getHours();
       const minuto = fechaObj.getMinutes();
       const minTotales = hora * 60 + minuto;
-      
+
+      // De 00:00 a 07:00 (0 a 420 min) la muestra se asigna al día anterior (Noche Ln del día de origen)
       if (minTotales <= 420) {
         const fechaAyer = new Date(fechaObj);
         fechaAyer.setDate(fechaAyer.getDate() - 1);
+        
         const anioAyer = fechaAyer.getFullYear();
         const mesAyer = String(fechaAyer.getMonth() + 1).padStart(2, '0');
         const diaAyer = String(fechaAyer.getDate()).padStart(2, '0');
         return `${anioAyer}-${mesAyer}-${diaAyer}`;
       }
+
       return `${anio}-${mes}-${dia}`;
     }
 
+    // Determina si la muestra es diurna (07:01 a 21:00)
     function esHorarioDiurno(hora, minuto) {
       const minTotales = hora * 60 + minuto;
-      return minTotales >= 421 && minTotales <= 1260;
+      const inicioDiurno = 7 * 60 + 1;  // 07:01
+      const finDiurno = 21 * 60 + 0;    // 21:00
+      return minTotales >= inicioDiurno && minTotales <= finDiurno;
     }
 
-    function actualizarTarjetaPrincipal(ultimo) {
-      const elLaeq = document.getElementById('val-laeq1s');
-      const elLceq = document.getElementById('val-lceq1s');
+    async function obtenerActual() {
+      try {
+        const res = await fetch(URL_ACTUAL);
+        const data = await res.json();
+        if (data && data.LAeq_1s !== undefined) {
+          document.getElementById('val-laeq1s').innerText = data.LAeq_1s.toFixed(1);
+          document.getElementById('val-lceq1s').innerText = `${data.LCeq_1s.toFixed(1)} dBC`;
+          
+          if (data.lat && data.lng && marcador) {
+            marcador.setLatLng([data.lat, data.lng]);
+            document.getElementById('coords-text').innerText = `${data.lat.toFixed(6)}, ${data.lng.toFixed(6)}`;
+          }
 
-      if (ultimo && ultimo.LAeq_1min !== null && !isNaN(ultimo.LAeq_1min)) {
-        elLaeq.innerText = ultimo.LAeq_1min.toFixed(1);
-
-        if (ultimo.LCeq_1min !== null && !isNaN(ultimo.LCeq_1min)) {
-          elLceq.innerText = `${ultimo.LCeq_1min.toFixed(1)} dBC`;
-        } else {
-          elLceq.innerText = "--.- dBC";
+          actualizarBadgeEstado(true);
+          ultimaRespuestaTime = Date.now();
         }
-
-        if (ultimo.lat && ultimo.lng && marcador) {
-          marcador.setLatLng([ultimo.lat, ultimo.lng]);
-          document.getElementById('coords-text').innerText = `${Number(ultimo.lat).toFixed(6)}, ${Number(ultimo.lng).toFixed(6)}`;
+      } catch (err) {
+        console.error("Error tiempo real:", err);
+        if (Date.now() - ultimaRespuestaTime > 8000) {
+          actualizarBadgeEstado(false);
         }
-      } else {
-        elLaeq.innerText = "--.-";
-        elLceq.innerText = "--.- dBC";
-      }
-    }
-
-    function verificarEstadoConexion() {
-      const ahoraMs = Date.now();
-      const diferenciaSegundos = (ahoraMs - ultimoRegistroTimestampMs) / 1000;
-
-      if (ultimoRegistroTimestampMs > 0 && diferenciaSegundos <= 120) {
-        actualizarBadgeEstado(true);
-      } else {
-        actualizarBadgeEstado(false);
       }
     }
 
@@ -474,6 +579,7 @@
       const badge = document.getElementById('badge-estado');
       const dot = document.getElementById('dot-estado');
       const texto = document.getElementById('texto-estado');
+
       if (activo) {
         badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
         dot.className = "w-2 h-2 rounded-full bg-emerald-400 animate-pulse";
@@ -481,7 +587,7 @@
       } else {
         badge.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20";
         dot.className = "w-2 h-2 rounded-full bg-rose-500";
-        texto.innerText = "Desconectado";
+        texto.innerText = "Sin Conexión";
       }
     }
 
@@ -491,35 +597,29 @@
         const data = await res.json();
         if (!data) {
           datosBrutosGlobales = [];
-          actualizarTarjetaPrincipal(null);
           renderizarVista1Min();
           renderizarVistaLdLnDiaria();
           renderizarVistaLdLnMensual();
           renderizarVistaAnual();
-          verificarEstadoConexion();
           return;
         }
 
         datosBrutosGlobales = [];
-        let maxTimestamp = 0;
 
         Object.keys(data).forEach(key => {
           const item = data[key];
-          if (item && item.timestamp && item.timestamp > 0) {
+          if (item.timestamp && item.timestamp > 0) {
             const fechaObj = new Date(item.timestamp * 1000);
+            
             const anio = fechaObj.getFullYear();
             const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
             const dia = String(fechaObj.getDate()).padStart(2, '0');
             const fechaStrCalendario = `${anio}-${mes}-${dia}`;
             const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
 
-            const laeqVal = (item.LAeq_1min !== undefined && item.LAeq_1min !== null) ? Number(item.LAeq_1min) : null;
-            const lamaxVal = (item.LAmax_1min !== undefined && item.LAmax_1min !== null) ? Number(item.LAmax_1min) : null;
-            const lceqVal = (item.LCeq_1min !== undefined && item.LCeq_1min !== null) ? Number(item.LCeq_1min) : null;
-
-            if (item.timestamp > maxTimestamp) {
-              maxTimestamp = item.timestamp;
-            }
+            const laeqVal = (item.LAeq_1min && item.LAeq_1min > 10) ? item.LAeq_1min : null;
+            const lamaxVal = (item.LAmax_1min && item.LAmax_1min > 10) ? item.LAmax_1min : null;
+            const lceqVal = (item.LCeq_1min && item.LCeq_1min > 10) ? item.LCeq_1min : null;
 
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
@@ -528,8 +628,6 @@
               fechaStrOperacional: fechaStrOperacional,
               hora: fechaObj.getHours(),
               minuto: fechaObj.getMinutes(),
-              lat: item.lat,
-              lng: item.lng,
               LAeq_1min: laeqVal,
               LAmax_1min: lamaxVal,
               LCeq_1min: lceqVal
@@ -537,17 +635,11 @@
           }
         });
 
-        if (maxTimestamp > 0) {
-          ultimoRegistroTimestampMs = maxTimestamp * 1000;
-        }
-
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
 
         if (datosBrutosGlobales.length > 0) {
-          const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
-          actualizarTarjetaPrincipal(ultimoRegistro);
-
-          const ultimaFechaStr = ultimoRegistro.fechaStrOperacional;
+          const ultimaFechaStr = datosBrutosGlobales[datosBrutosGlobales.length - 1].fechaStrOperacional;
+          
           if (!document.getElementById('filtro-fecha-1min').value) {
             document.getElementById('filtro-fecha-1min').value = ultimaFechaStr;
           }
@@ -557,19 +649,15 @@
           if (!document.getElementById('filtro-mes-ldln').value) {
             document.getElementById('filtro-mes-ldln').value = ultimaFechaStr.substring(0, 7);
           }
-        } else {
-          actualizarTarjetaPrincipal(null);
         }
 
         renderizarVista1Min();
         renderizarVistaLdLnDiaria();
         renderizarVistaLdLnMensual();
         renderizarVistaAnual();
-        verificarEstadoConexion();
 
       } catch (err) {
         console.error("Error al procesar historial:", err);
-        verificarEstadoConexion();
       }
     }
 
@@ -582,17 +670,33 @@
       let lamaxData = [];
 
       if (modoPeriodo1Min === '1d') {
-        const datosDelDia = datosBrutosGlobales.filter(d => d.fechaStrCalendario === fechaSel);
-        
-        datosDelDia.forEach(d => {
-          const timeStr = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
-          labels.push(timeStr);
-          laeqData.push(d.LAeq_1min);
-          lamaxData.push(d.LAmax_1min);
+        const mapaMinutos = new Map();
+        datosBrutosGlobales.forEach(d => {
+          if (d.fechaStrCalendario === fechaSel) {
+            const minKey = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
+            mapaMinutos.set(minKey, d);
+          }
         });
+
+        for (let h = 0; h < 24; h++) {
+          for (let m = 0; m < 60; m++) {
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+            labels.push(timeStr);
+            if (mapaMinutos.has(timeStr)) {
+              const reg = mapaMinutos.get(timeStr);
+              laeqData.push(reg.LAeq_1min);
+              lamaxData.push(reg.LAmax_1min);
+            } else {
+              laeqData.push(null);
+              lamaxData.push(null);
+            }
+          }
+        }
       } else {
         const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
-        const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);
+        const ahora = Date.now();
+        const tLimite = ahora - (diasLimite * 24 * 3600 * 1000);
+
         const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
 
         filtrados.forEach(d => {
@@ -629,15 +733,22 @@
 
       if (laeqValidos.length === 0) {
         document.getElementById('stat-min').innerText = "--.- dBA";
+        document.getElementById('stat-avg').innerText = "--.- dBA";
         document.getElementById('stat-max').innerText = "--.- dBA";
+        document.getElementById('stat-count').innerText = "0";
+        document.getElementById('val-laeq1min').innerText = "--.- dBA";
         return;
       }
 
       const minVal = Math.min(...laeqValidos);
       const maxVal = Math.max(...lamaxValidos.length > 0 ? lamaxValidos : laeqValidos);
+      const avgVal = calcularLAeqPromedio(laeqValidos);
 
       document.getElementById('stat-min').innerText = `${minVal.toFixed(1)} dBA`;
       document.getElementById('stat-max').innerText = `${maxVal.toFixed(1)} dBA`;
+      document.getElementById('stat-avg').innerText = avgVal !== null ? `${avgVal.toFixed(1)} dBA` : "--.- dBA";
+      document.getElementById('stat-count').innerText = laeqValidos.length;
+      document.getElementById('val-laeq1min').innerText = `${laeqValidos[laeqValidos.length - 1].toFixed(1)} dBA`;
     }
 
     function renderizarVistaLdLnDiaria() {
@@ -730,6 +841,7 @@
       chartAnual.update();
     }
 
+    // Funcionalidad de Exportación de CSV por Rango de Fechas Operacionales
     function descargarCSVFiltrado() {
       if (!datosBrutosGlobales || datosBrutosGlobales.length === 0) {
         alert("No hay datos históricos disponibles para exportar.");
@@ -774,22 +886,25 @@
       document.body.removeChild(link);
     }
 
+    // Funcionalidad de Borrado Permanente en Firebase
     async function borrarHistorialFirebase() {
       const confirmacion = confirm("⚠️ ¿Estás seguro de que deseas eliminar permanentemente todo el historial de mediciones de Firebase?");
       if (!confirmacion) return;
 
       try {
-        const respuesta = await fetch(URL_HISTORIAL, { method: 'DELETE' });
+        const respuesta = await fetch(URL_HISTORIAL, {
+          method: 'DELETE'
+        });
+
         if (respuesta.ok) {
           alert("El historial se eliminó correctamente de Firebase.");
           datosBrutosGlobales = [];
-          actualizarTarjetaPrincipal(null);
           renderizarVista1Min();
           renderizarVistaLdLnDiaria();
           renderizarVistaLdLnMensual();
           renderizarVistaAnual();
         } else {
-          alert("No se pudo eliminar el historial. Verifica las reglas de Firebase.");
+          alert("No se pudo eliminar el historial. Verifica que la regla '.write' esté habilitada en tu base de datos de Firebase.");
         }
       } catch (error) {
         console.error("Error al eliminar los datos:", error);
@@ -800,11 +915,11 @@
     window.addEventListener('DOMContentLoaded', () => {
       initMap();
       initCharts();
+      obtenerActual();
       obtenerHistorial();
-      
-      // Actualiza cada 5 segundos leyendo directamente el historial de Firebase
-      setInterval(obtenerHistorial, 5000);
-      setInterval(verificarEstadoConexion, 5000);
+
+      setInterval(obtenerActual, 2000);
+      setInterval(obtenerHistorial, 60000);
     });
   </script>
 </body>

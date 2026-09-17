@@ -15,10 +15,29 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+  <style>
+    /* Marcadores personalizados para la semaforización */
+    .semaforo-pin {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      font-weight: 800;
+      font-size: 11px;
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(0,0,0,0.5);
+      border: 2px solid #ffffff;
+      transition: all 0.3s ease;
+    }
+    .badge-verde { bg-color: #10b981; background: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.7); }
+    .badge-amarillo { bg-color: #f59e0b; background: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.7); }
+    .badge-rojo { bg-color: #ef4444; background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.7); }
+  </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
 
-  <!-- CAPA DE BLOQUEO / PANTALLA DE INICIO DE SESIÓN OBLIGATORIA -->
+  <!-- CAPA DE BLOQUEO / PANTALLA DE INICIO DE SESIÓN -->
   <div id="pantalla-bloqueo" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md">
     <div class="relative w-full max-w-md overflow-hidden rounded-3xl border border-slate-700/60 bg-slate-900 shadow-2xl">
       <div class="absolute inset-0 z-0 bg-cover bg-center opacity-30" 
@@ -34,9 +53,8 @@
             </svg>
           </div>
           <h3 id="modal-titulo" class="text-2xl font-black text-white tracking-tight">Acceso Restringido</h3>
-          <p class="text-xs text-slate-400 mt-1">Debes iniciar sesión o registrarte para ver los datos del sistema</p>
+          <p class="text-xs text-slate-400 mt-1">Debes iniciar sesión para acceder al sistema de monitoreo</p>
         </div>
-
         <form id="form-auth" onsubmit="procesarAuth(event)" class="space-y-4">
           <div>
             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Correo Electrónico</label>
@@ -53,7 +71,6 @@
             Ingresar al Dashboard
           </button>
         </form>
-
         <div class="mt-6 pt-4 border-t border-slate-800 text-center">
           <button onclick="cambiarModoAuth()" id="btn-toggle-modo" class="text-xs text-indigo-400 hover:text-indigo-300 font-medium transition">
             ¿No tienes cuenta? Regístrate aquí
@@ -63,11 +80,11 @@
     </div>
   </div>
 
-  <!-- CONTENIDO PRINCIPAL (Oculto hasta autenticarse) -->
+  <!-- CONTENIDO PRINCIPAL -->
   <div id="contenido-dashboard" class="hidden">
     <!-- Header -->
     <header class="bg-slate-800 border-b border-slate-700 p-4 shadow-lg sticky top-0 z-40">
-      <div class="max-w-6xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
+      <div class="max-w-7xl mx-auto flex flex-col xl:flex-row justify-between items-center gap-4">
         <div class="flex items-center gap-3">
           <div class="p-2.5 bg-indigo-600 rounded-xl shadow-inner">
             <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,8 +93,17 @@
           </div>
           <div>
             <h1 class="text-xl font-bold tracking-tight">Red de Monitoreo Acústico</h1>
-            <p class="text-xs text-slate-400">Estación 01 — Tecnoparque / Neiva, Huila</p>
+            <p id="subtitulo-estacion" class="text-xs text-slate-400">Estación Seleccionada — Neiva, Huila</p>
           </div>
+        </div>
+
+        <!-- SELECTOR GLOBAL DE NODO -->
+        <div class="flex items-center gap-2 bg-slate-900/90 border border-indigo-500/50 p-1.5 rounded-xl shadow-md">
+          <span class="text-xs text-indigo-400 font-bold pl-2 uppercase tracking-wider">Nodo:</span>
+          <select id="selector-nodo-global" onchange="cambiarNodoSeleccionado(this.value)" class="bg-slate-800 text-xs text-white font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer">
+            <option value="nodo1" selected>Nodo 01 — Tecnoparque</option>
+            <option value="nodo2">Nodo 02 — Parque Santander (Proyección)</option>
+          </select>
         </div>
         
         <div class="flex flex-wrap items-center gap-3">
@@ -85,14 +111,12 @@
             <span id="dot-estado" class="w-2 h-2 rounded-full bg-slate-400"></span>
             <span id="texto-estado">Verificando...</span>
           </span>
-
           <div class="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-700">
             <span id="user-display" class="text-xs text-slate-300 font-semibold px-2"></span>
             <button id="btn-logout" onclick="cerrarSesion()" class="bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs px-3 py-1.5 rounded-lg font-medium transition">
               Cerrar Sesión
             </button>
           </div>
-
           <div class="flex items-center gap-1.5 bg-slate-900/80 p-1.5 rounded-lg border border-slate-700">
             <span class="text-[11px] text-slate-400 pl-1">Desde:</span>
             <input type="date" id="export-inicio" class="bg-slate-800 border border-slate-600 text-xs text-slate-200 rounded px-1.5 py-1 focus:outline-none focus:border-indigo-500">
@@ -104,7 +128,6 @@
             </button>
           </div>
           
-          <!-- Botón de Borrado (Exclusivo Administrador) -->
           <button id="btn-borrar-historial" onclick="borrarHistorialFirebaseSeguro()" class="bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs px-3 py-2 rounded-lg font-medium transition items-center gap-1 hidden">
             🗑️ Borrar Historial
           </button>
@@ -112,8 +135,12 @@
       </div>
     </header>
 
-    <main class="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
+      
+      <!-- FILA SUPERIOR: TARJETA TIEMPO REAL + MAPA CON FOTO DEL PUNTO -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Tarjeta Tiempo Real -->
         <div class="bg-slate-800 border border-slate-700 rounded-2xl p-6 shadow-lg flex flex-col justify-between">
           <div>
             <div class="flex justify-between items-center mb-2">
@@ -141,15 +168,26 @@
             </div>
           </div>
         </div>
+
+        <!-- Mapa de Red Urbano + Foto de Emplazamiento -->
         <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
           <div class="flex justify-between items-center mb-3 px-1">
-            <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación de la Estación</h2>
-            <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Ubicación y Estado de Red</h2>
+              <span class="text-[10px] text-slate-400">| Leyenda: <span class="text-emerald-400">● Normal</span> <span class="text-amber-400">● Alerta</span> <span class="text-rose-400">● Excedencia</span></span>
+            </div>
+            <div class="flex items-center gap-3">
+              <button onclick="abrirModalEmplazamiento()" class="text-xs bg-indigo-600/30 hover:bg-indigo-600 border border-indigo-500/40 text-indigo-200 px-2.5 py-1 rounded-lg transition flex items-center gap-1 font-medium">
+                📷 Ver Foto del Sensor
+              </button>
+              <span class="text-xs text-slate-400 font-mono" id="coords-text">2.865666, -75.216591</span>
+            </div>
           </div>
-          <div id="mapa" class="w-full h-48 sm:h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
+          <div id="mapa" class="w-full h-56 rounded-xl border border-slate-700 z-10 overflow-hidden"></div>
         </div>
       </div>
 
+      <!-- Evolución Temporal -->
       <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div>
@@ -173,6 +211,7 @@
         </div>
       </div>
 
+      <!-- Niveles Día/Noche y Mensual -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div class="lg:col-span-1 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
           <div>
@@ -191,6 +230,7 @@
             <span>Día: 07:01–21:00</span> &nbsp;|&nbsp; <span>Noche: 21:01–07:00 (+1d)</span>
           </div>
         </div>
+
         <div class="lg:col-span-2 bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg flex flex-col justify-between">
           <div>
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
@@ -213,6 +253,7 @@
         </div>
       </div>
 
+      <!-- Evolución Anual -->
       <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg">
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
           <div>
@@ -234,48 +275,94 @@
     </main>
   </div>
 
+  <!-- MODAL DE EMPLAZAMIENTO Y FOTO DEL SENSOR -->
+  <div id="modal-emplazamiento" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="relative w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl p-6">
+      <div class="flex justify-between items-center mb-4">
+        <div>
+          <h3 id="modal-nodo-nombre" class="text-lg font-bold text-white">Nodo 01 — Tecnoparque / Neiva</h3>
+          <p class="text-xs text-slate-400">Registro fotográfico del punto de medición en campo</p>
+        </div>
+        <button onclick="cerrarModalEmplazamiento()" class="text-slate-400 hover:text-white p-1 rounded-lg">✕</button>
+      </div>
+      <div class="rounded-xl overflow-hidden border border-slate-700 bg-slate-950">
+        <img id="modal-nodo-foto" src="https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=800&auto=format&fit=crop" 
+             alt="Fotografía del punto de medición" class="w-full h-64 object-cover">
+      </div>
+      <div class="mt-4 grid grid-cols-2 gap-3 text-xs bg-slate-800/80 p-3 rounded-xl border border-slate-700/60">
+        <div>
+          <span class="text-slate-400 block">Ubicación:</span>
+          <span id="modal-nodo-desc" class="font-semibold text-slate-200">Sede Tecnoparque Neiva</span>
+        </div>
+        <div>
+          <span class="text-slate-400 block">Sector Normativo:</span>
+          <span class="font-semibold text-indigo-400">Comercial / Intermedio (65/55 dB)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const URL_HISTORIAL = "https://acustica-neiva-default-rtdb.firebaseio.com/nodo1/historial.json";
+    // METADATOS DE LA RED MULTINODO
+    const BASE_URL_FIREBASE = "https://acustica-neiva-default-rtdb.firebaseio.com/";
+    const redNodos = {
+      nodo1: {
+        id: "nodo1",
+        nombre: "Nodo 01 — Tecnoparque",
+        lat: 2.865666,
+        lng: -75.216591,
+        foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=800&auto=format&fit=crop",
+        descripcion: "Sede Tecnoparque Calle 21 # 5-29, Neiva",
+        sector: "comercial"
+      },
+      nodo2: {
+        id: "nodo2",
+        nombre: "Nodo 02 — Parque Santander",
+        lat: 2.927300,
+        lng: -75.281800,
+        foto: "https://images.unsplash.com/photo-1517646287270-a5a9ca602e5c?q=80&w=800&auto=format&fit=crop",
+        descripcion: "Zona Centro Comercial / Parque Santander",
+        sector: "comercial"
+      }
+    };
+
+    let nodoSeleccionadoActual = "nodo1";
 
     const firebaseConfig = {
-    apiKey: "AIzaSyCmfD-H6B5bXMEZN-3KcPCmZk8d-6p4ddE",
-    authDomain: "acustica-neiva.firebaseapp.com",
-    databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
-    projectId: "acustica-neiva",
-    storageBucket: "acustica-neiva.firebasestorage.app",
-    messagingSenderId: "961700962262",
-    appId: "1:961700962262:web:1915979d28cd9e979b4e77",
-    measurementId: "G-9RYWVSQZ36"
-  };
+      apiKey: "AIzaSyCmfD-H6B5bXMEZN-3KcPCmZk8d-6p4ddE",
+      authDomain: "acustica-neiva.firebaseapp.com",
+      databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
+      projectId: "acustica-neiva",
+      storageBucket: "acustica-neiva.firebasestorage.app",
+      messagingSenderId: "961700962262",
+      appId: "1:961700962262:web:1915979d28cd9e979b4e77",
+      measurementId: "G-9RYWVSQZ36"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
-
+    
     let esModoRegistro = false;
     let rolUsuarioActual = 'invitado';
     let mapaInicializado = false;
     let intervaloPoll = null;
 
-    // CONTROL STRICTO DE AUTENTICACIÓN
     auth.onAuthStateChanged(async (user) => {
       const pantallaBloqueo = document.getElementById('pantalla-bloqueo');
       const contenidoDashboard = document.getElementById('contenido-dashboard');
       const btnBorrar = document.getElementById('btn-borrar-historial');
       const userDisplay = document.getElementById('user-display');
-
+      
       if (user) {
-        // Usuario autenticado
         const snapshot = await db.ref(`usuarios/${user.uid}`).once('value');
         const datosUsuario = snapshot.val();
         rolUsuarioActual = datosUsuario ? datosUsuario.rol : 'lector';
-
         userDisplay.innerText = `${user.email} (${rolUsuarioActual.toUpperCase()})`;
         
-        // Mostrar interfaz de datos y ocultar pantalla de bloqueo
         pantallaBloqueo.classList.add('hidden');
         contenidoDashboard.classList.remove('hidden');
 
-        // Permisos especiales de Administrador
         if (rolUsuarioActual === 'admin') {
           btnBorrar.classList.remove('hidden');
           btnBorrar.classList.add('flex');
@@ -284,25 +371,20 @@
           btnBorrar.classList.remove('flex');
         }
 
-        // Inicializar componentes visuales si es la primera vez
         if (!mapaInicializado) {
           initMap();
           initCharts();
           mapaInicializado = true;
         }
 
-        // Cargar datos y arrancar polling
         obtenerHistorial();
         if (!intervaloPoll) {
           intervaloPoll = setInterval(obtenerHistorial, 5000);
         }
-
       } else {
-        // Ningún usuario autenticado: Bloqueo total
         rolUsuarioActual = 'invitado';
         contenidoDashboard.classList.add('hidden');
         pantallaBloqueo.classList.remove('hidden');
-
         if (intervaloPoll) {
           clearInterval(intervaloPoll);
           intervaloPoll = null;
@@ -321,16 +403,15 @@
       e.preventDefault();
       const email = document.getElementById('auth-email').value;
       const password = document.getElementById('auth-password').value;
-
       try {
         if (esModoRegistro) {
           const credencial = await auth.createUserWithEmailAndPassword(email, password);
           await db.ref(`usuarios/${credencial.user.uid}`).set({
             email: email,
-            rol: 'lector', // Rol por defecto al registrarse
+            rol: 'lector',
             creadoEn: Date.now()
           });
-          alert("✅ Registro exitoso. Ahora tienes acceso de lectura.");
+          alert("✅ Registro exitoso. Acceso concedido.");
         } else {
           await auth.signInWithEmailAndPassword(email, password);
         }
@@ -339,8 +420,18 @@
       }
     }
 
-    function cerrarSesion() {
-      auth.signOut();
+    function cerrarSesion() { auth.signOut(); }
+
+    function cambiarNodoSeleccionado(nuevoNodoId) {
+      nodoSeleccionadoActual = nuevoNodoId;
+      document.getElementById('selector-nodo-global').value = nuevoNodoId;
+      document.getElementById('subtitulo-estacion').innerText = `${redNodos[nuevoNodoId].nombre} — Neiva, Huila`;
+      
+      const configNodo = redNodos[nuevoNodoId];
+      if (mapa) {
+        mapa.flyTo([configNodo.lat, configNodo.lng], 15, { duration: 1.2 });
+      }
+      obtenerHistorial();
     }
 
     async function borrarHistorialFirebaseSeguro() {
@@ -349,15 +440,12 @@
         alert("🔒 Acción denegada. Solo el administrador puede borrar registros.");
         return;
       }
-
-      const confirmacion = confirm(`⚠️ Hola ${usuarioActual.email}, estás a punto de BORRAR TODO el historial de la base de datos. ¿Deseas continuar?`);
+      const confirmacion = confirm(`⚠️ Hola ${usuarioActual.email}, estás a punto de BORRAR el historial de ${redNodos[nodoSeleccionadoActual].nombre}. ¿Continuar?`);
       if (!confirmacion) return;
-
       try {
         const token = await usuarioActual.getIdToken();
-        const urlConAuth = `${URL_HISTORIAL}?auth=${token}`;
+        const urlConAuth = `${BASE_URL_FIREBASE}${nodoSeleccionadoActual}/historial.json?auth=${token}`;
         const respuesta = await fetch(urlConAuth, { method: 'DELETE' });
-
         if (respuesta.ok) {
           alert("✅ Historial de mediciones eliminado.");
           datosBrutosGlobales = [];
@@ -371,12 +459,12 @@
         }
       } catch (error) {
         console.error("Error al borrar:", error);
-        alert("❌ Fallo en la comunicación al intentar eliminar datos.");
       }
     }
 
-    // LÓGICA DE DATO Y GRÁFICAS
-    let mapa, marcador;
+    // MAPA Y SEMAFORIZACIÓN EN TIEMPO REAL
+    let mapa;
+    let marcadoresMapa = {};
     let chartHistorial1Min, chartLdLnDiaria, chartLdLnMensual, chartAnual;
     let datosBrutosGlobales = [];
     let ultimoRegistroTimestampMs = 0;
@@ -384,17 +472,47 @@
 
     Chart.register(ChartDataLabels);
 
-    function initMap(lat = 2.865666, lng = -75.216591) {
-      mapa = L.map('mapa', { zoomControl: false }).setView([lat, lng], 15);
+    function initMap() {
+      mapa = L.map('mapa', { zoomControl: false }).setView([redNodos.nodo1.lat, redNodos.nodo1.lng], 15);
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '&copy; OpenStreetMap'
       }).addTo(mapa);
-      marcador = L.marker([lat, lng]).addTo(mapa)
-        .bindPopup('<b>Nodo 1 - Neiva</b><br>Estación Activa.')
-        .openPopup();
+
+      Object.keys(redNodos).forEach(nodeId => {
+        const nodo = redNodos[nodeId];
+        const icon = L.divIcon({
+          className: 'custom-pin',
+          html: `<div id="pin-${nodeId}" class="semaforo-pin badge-verde" style="width:36px; height:36px;">--</div>`,
+          iconSize: [36, 36],
+          iconAnchor: [18, 18]
+        });
+
+        const m = L.marker([nodo.lat, nodo.lng], { icon: icon }).addTo(mapa);
+        m.on('click', () => cambiarNodoSeleccionado(nodeId));
+        m.bindPopup(`<b>${nodo.nombre}</b><br>${nodo.descripcion}`);
+        marcadoresMapa[nodeId] = m;
+      });
     }
 
-   function initCharts() {
+    function evaluarSemaforo(laeq, horaActual) {
+      const esDiurno = horaActual >= 7 && horaActual < 21;
+      const limite = esDiurno ? 65 : 50; // Res. 0627/2006
+      if (laeq <= limite) return 'badge-verde';
+      if (laeq <= limite + 3) return 'badge-amarillo';
+      return 'badge-rojo';
+    }
+
+    function actualizarMarcadorMapa(nodeId, laeq, horaActual) {
+      const pinEl = document.getElementById(`pin-${nodeId}`);
+      if (pinEl && laeq !== null && !isNaN(laeq)) {
+        pinEl.innerText = laeq.toFixed(1);
+        const claseColor = evaluarSemaforo(laeq, horaActual);
+        pinEl.className = `semaforo-pin ${claseColor}`;
+      }
+    }
+
+    // GRÁFICAS Y REGLAS CON LÍNEAS PUNTEADAS RECUPERADAS
+    function initCharts() {
       const ctx1 = document.getElementById('graficaAcustica').getContext('2d');
       const gradienteLaeq = ctx1.createLinearGradient(0, 0, 0, 300);
       gradienteLaeq.addColorStop(0, 'rgba(129, 140, 248, 0.15)');
@@ -405,30 +523,8 @@
         data: {
           labels: [],
           datasets: [
-            {
-              label: 'LAeq,1min [dBA]',
-              data: [],
-              borderColor: '#818cf8',
-              backgroundColor: gradienteLaeq,
-              borderWidth: 1.8,
-              fill: true,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              spanGaps: false,
-              tension: 0.35
-            },
-            {
-              label: 'LAmax,1min [dBA]',
-              data: [],
-              borderColor: '#fb7185',
-              borderWidth: 1.5,
-              borderDash: [3, 3],
-              fill: false,
-              pointRadius: 0,
-              pointHoverRadius: 4,
-              spanGaps: false,
-              tension: 0.35
-            }
+            { label: 'LAeq,1min [dBA]', data: [], borderColor: '#818cf8', backgroundColor: gradienteLaeq, borderWidth: 1.8, fill: true, pointRadius: 0, pointHoverRadius: 4, spanGaps: false, tension: 0.35 },
+            { label: 'LAmax,1min [dBA]', data: [], borderColor: '#fb7185', borderWidth: 1.5, borderDash: [3, 3], fill: false, pointRadius: 0, pointHoverRadius: 4, spanGaps: false, tension: 0.35 }
           ]
         },
         options: {
@@ -439,8 +535,7 @@
             x: {
               grid: { color: '#334155' },
               ticks: { 
-                color: '#94a3b8', 
-                font: { size: 10 },
+                color: '#94a3b8', font: { size: 10 },
                 callback: function(val) {
                   const label = this.getLabelForValue(val);
                   if (!label) return '';
@@ -451,12 +546,7 @@
                 }
               }
             },
-            y: {
-              grid: { color: '#334155' },
-              ticks: { color: '#94a3b8', font: { size: 11 } },
-              suggestedMin: 35,
-              suggestedMax: 85
-            }
+            y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8', font: { size: 11 } }, suggestedMin: 35, suggestedMax: 85 }
           },
           plugins: {
             legend: { labels: { color: '#e2e8f0', font: { size: 12 } } },
@@ -465,7 +555,7 @@
         }
       });
 
-      // --- GRÁFICA 2: NIVELES DÍA Y NOCHE (CON LÍNEAS DE LÍMITE RECUPERADAS) ---
+      // GRÁFICA 2: DIA Y NOCHE CON LÍNEAS DE LÍMITE (65 / 50 dBA)
       const ctx2 = document.getElementById('graficaLdLnDiaria').getContext('2d');
       chartLdLnDiaria = new Chart(ctx2, {
         type: 'bar',
@@ -495,35 +585,15 @@
             },
             annotation: {
               annotations: {
-                limiteLd: {
-                  type: 'line',
-                  yMin: 65,
-                  yMax: 65,
-                  xMin: -0.4,
-                  xMax: 0.4,
-                  borderColor: '#f87171',
-                  borderWidth: 2,
-                  borderDash: [5, 5],
-                  label: { display: false }
-                },
-                limiteLn: {
-                  type: 'line',
-                  yMin: 50,
-                  yMax: 50,
-                  xMin: 0.6,
-                  xMax: 1.4,
-                  borderColor: '#38bdf8',
-                  borderWidth: 2,
-                  borderDash: [5, 5],
-                  label: { display: false }
-                }
+                limiteLd: { type: 'line', yMin: 65, yMax: 65, xMin: -0.4, xMax: 0.4, borderColor: '#f87171', borderWidth: 2, borderDash: [5, 5] },
+                limiteLn: { type: 'line', yMin: 50, yMax: 50, xMin: 0.6, xMax: 1.4, borderColor: '#38bdf8', borderWidth: 2, borderDash: [5, 5] }
               }
             }
           }
         }
       });
 
-      // --- GRÁFICA 3: EVOLUCIÓN MENSUAL ---
+      // GRÁFICA 3: MENSUAL CON LÍNEAS DE LÍMITE
       const ctx3 = document.getElementById('graficaLdLnMensual').getContext('2d');
       chartLdLnMensual = new Chart(ctx3, {
         type: 'line',
@@ -546,15 +616,15 @@
             datalabels: { display: false },
             annotation: {
               annotations: {
-                limiteLd: { type: 'line', yMin: 65, yMax: 65, borderColor: 'rgba(248, 113, 113, 0.5)', borderWidth: 1.5, borderDash: [4, 4] },
-                limiteLn: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(56, 189, 248, 0.5)', borderWidth: 1.5, borderDash: [4, 4] }
+                limiteLd: { type: 'line', yMin: 65, yMax: 65, borderColor: 'rgba(248, 113, 113, 0.6)', borderWidth: 1.5, borderDash: [4, 4] },
+                limiteLn: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(56, 189, 248, 0.6)', borderWidth: 1.5, borderDash: [4, 4] }
               }
             }
           }
         }
       });
 
-      // --- GRÁFICA 4: EVOLUCIÓN ANUAL ---
+      // GRÁFICA 4: ANUAL CON LÍNEAS DE LÍMITE
       const ctx4 = document.getElementById('graficaAnual').getContext('2d');
       chartAnual = new Chart(ctx4, {
         type: 'bar',
@@ -580,8 +650,8 @@
             },
             annotation: {
               annotations: {
-                limiteLd: { type: 'line', yMin: 65, yMax: 65, borderColor: 'rgba(248, 113, 113, 0.5)', borderWidth: 1.5, borderDash: [4, 4] },
-                limiteLn: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(56, 189, 248, 0.5)', borderWidth: 1.5, borderDash: [4, 4] }
+                limiteLd: { type: 'line', yMin: 65, yMax: 65, borderColor: 'rgba(248, 113, 113, 0.6)', borderWidth: 1.5, borderDash: [4, 4] },
+                limiteLn: { type: 'line', yMin: 50, yMax: 50, borderColor: 'rgba(56, 189, 248, 0.6)', borderWidth: 1.5, borderDash: [4, 4] }
               }
             }
           }
@@ -621,10 +691,12 @@
       if (ultimo && ultimo.LAeq_1min !== null && !isNaN(ultimo.LAeq_1min)) {
         elLaeq.innerText = ultimo.LAeq_1min.toFixed(1);
         elLceq.innerText = ultimo.LCeq_1min !== null ? `${ultimo.LCeq_1min.toFixed(1)} dBC` : "--.- dBC";
-        if (ultimo.lat && ultimo.lng && marcador) {
-          marcador.setLatLng([ultimo.lat, ultimo.lng]);
-          document.getElementById('coords-text').innerText = `${Number(ultimo.lat).toFixed(6)}, ${Number(ultimo.lng).toFixed(6)}`;
-        }
+        
+        const latActual = ultimo.lat || redNodos[nodoSeleccionadoActual].lat;
+        const lngActual = ultimo.lng || redNodos[nodoSeleccionadoActual].lng;
+        document.getElementById('coords-text').innerText = `${Number(latActual).toFixed(6)}, ${Number(lngActual).toFixed(6)}`;
+
+        actualizarMarcadorMapa(nodoSeleccionadoActual, ultimo.LAeq_1min, ultimo.hora);
       } else {
         elLaeq.innerText = "--.-";
         elLceq.innerText = "--.- dBC";
@@ -654,8 +726,10 @@
 
     async function obtenerHistorial() {
       try {
-        const res = await fetch(URL_HISTORIAL);
+        const urlNodo = `${BASE_URL_FIREBASE}${nodoSeleccionadoActual}/historial.json`;
+        const res = await fetch(urlNodo);
         const data = await res.json();
+
         if (!data) {
           datosBrutosGlobales = [];
           actualizarTarjetaPrincipal(null);
@@ -678,7 +752,6 @@
             const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
             
             if (item.timestamp > maxTimestamp) maxTimestamp = item.timestamp;
-
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
@@ -701,7 +774,6 @@
         if (datosBrutosGlobales.length > 0) {
           const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
           actualizarTarjetaPrincipal(ultimoRegistro);
-
           if (!document.getElementById('filtro-fecha-1min').value) document.getElementById('filtro-fecha-1min').value = ultimoRegistro.fechaStrOperacional;
           if (!document.getElementById('filtro-fecha-ldln').value) document.getElementById('filtro-fecha-ldln').value = ultimoRegistro.fechaStrOperacional;
           if (!document.getElementById('filtro-mes-ldln').value) document.getElementById('filtro-mes-ldln').value = ultimoRegistro.fechaStrOperacional.substring(0, 7);
@@ -723,7 +795,6 @@
     function renderizarVista1Min() {
       const fechaSel = document.getElementById('filtro-fecha-1min').value;
       if (!fechaSel && modoPeriodo1Min === '1d') return;
-
       let labels = [], laeqData = [], lamaxData = [];
 
       if (modoPeriodo1Min === '1d') {
@@ -765,7 +836,6 @@
     function actualizarTarjetasSuperiores(laeqArr, lamaxArr) {
       const laeqValidos = laeqArr.filter(v => v !== null && v !== undefined && !isNaN(v));
       const lamaxValidos = lamaxArr.filter(v => v !== null && v !== undefined && !isNaN(v));
-
       if (laeqValidos.length === 0) {
         document.getElementById('stat-min').innerText = "--.- dBA";
         document.getElementById('stat-max').innerText = "--.- dBA";
@@ -779,14 +849,12 @@
       const fechaSel = document.getElementById('filtro-fecha-ldln').value;
       if (!fechaSel) return;
       const muestrasDia = [], muestrasNoche = [];
-
       datosBrutosGlobales.forEach(d => {
         if (d.fechaStrOperacional === fechaSel && d.LAeq_1min !== null) {
           if (esHorarioDiurno(d.hora, d.minuto)) muestrasDia.push(d.LAeq_1min);
           else muestrasNoche.push(d.LAeq_1min);
         }
       });
-
       chartLdLnDiaria.data.datasets[0].data = [calcularLAeqPromedio(muestrasDia), calcularLAeqPromedio(muestrasNoche)];
       chartLdLnDiaria.update();
     }
@@ -796,9 +864,7 @@
       if (!mesSel) return;
       const [anioStr, mesStr] = mesSel.split('-');
       const diasEnMes = new Date(parseInt(anioStr), parseInt(mesStr), 0).getDate();
-
       const labels = [], ldArr = [], lnArr = [];
-
       for (let dia = 1; dia <= diasEnMes; dia++) {
         const diaStr = `${mesSel}-${String(dia).padStart(2, '0')}`;
         labels.push(String(dia).padStart(2, '0'));
@@ -813,7 +879,6 @@
         ldArr.push(calcularLAeqPromedio(muestrasDia));
         lnArr.push(calcularLAeqPromedio(muestrasNoche));
       }
-
       chartLdLnMensual.data.labels = labels;
       chartLdLnMensual.data.datasets[0].data = ldArr;
       chartLdLnMensual.data.datasets[1].data = lnArr;
@@ -824,7 +889,6 @@
       const anioSel = parseInt(document.getElementById('filtro-anio').value);
       const muestrasDiaMeses = Array(12).fill(null).map(() => []);
       const muestrasNocheMeses = Array(12).fill(null).map(() => []);
-
       datosBrutosGlobales.forEach(d => {
         const anioOp = parseInt(d.fechaStrOperacional.split('-')[0]);
         const mesOp = parseInt(d.fechaStrOperacional.split('-')[1]) - 1;
@@ -833,10 +897,21 @@
           else muestrasNocheMeses[mesOp].push(d.LAeq_1min);
         }
       });
-
       chartAnual.data.datasets[0].data = muestrasDiaMeses.map(m => calcularLAeqPromedio(m));
       chartAnual.data.datasets[1].data = muestrasNocheMeses.map(m => calcularLAeqPromedio(m));
       chartAnual.update();
+    }
+
+    function abrirModalEmplazamiento() {
+      const configNodo = redNodos[nodoSeleccionadoActual];
+      document.getElementById('modal-nodo-nombre').innerText = configNodo.nombre;
+      document.getElementById('modal-nodo-desc').innerText = configNodo.descripcion;
+      document.getElementById('modal-nodo-foto').src = configNodo.foto;
+      document.getElementById('modal-emplazamiento').classList.remove('hidden');
+    }
+
+    function cerrarModalEmplazamiento() {
+      document.getElementById('modal-emplazamiento').classList.add('hidden');
     }
 
     function descargarCSVFiltrado() {
@@ -846,8 +921,8 @@
       }
       const fInicio = document.getElementById('export-inicio').value;
       const fFin = document.getElementById('export-fin').value;
-
       let datosFiltrados = datosBrutosGlobales;
+
       if (fInicio || fFin) {
         datosFiltrados = datosBrutosGlobales.filter(d => {
           if (fInicio && d.fechaStrOperacional < fInicio) return false;
@@ -861,16 +936,16 @@
         return;
       }
 
-      let csvContent = "data:text/csv;charset=utf-8,Timestamp,Fecha_Calendario,Fecha_Operacional,Hora,LAeq_1min,LAmax_1min,LCeq_1min\n";
+      let csvContent = "data:text/csv;charset=utf-8,Nodo,Timestamp,Fecha_Calendario,Fecha_Operacional,Hora,LAeq_1min,LAmax_1min,LCeq_1min\n";
       datosFiltrados.forEach(d => {
         const horaStr = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}:00`;
-        csvContent += `${d.timestamp},${d.fechaStrCalendario},${d.fechaStrOperacional},${horaStr},${d.LAeq_1min ?? ""},${d.LAmax_1min ?? ""},${d.LCeq_1min ?? ""}\n`;
+        csvContent += `${nodoSeleccionadoActual},${d.timestamp},${d.fechaStrCalendario},${d.fechaStrOperacional},${horaStr},${d.LAeq_1min ?? ""},${d.LAmax_1min ?? ""},${d.LCeq_1min ?? ""}\n`;
       });
 
       const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
       link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `reporte_acustico_${fInicio || 'inicio'}_a_${fFin || 'fin'}.csv`);
+      link.setAttribute("download", `reporte_${nodoSeleccionadoActual}_${fInicio || 'inicio'}_a_${fFin || 'fin'}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

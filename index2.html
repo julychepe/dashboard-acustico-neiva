@@ -793,51 +793,60 @@
     }
 
     function renderizarVista1Min() {
-      const fechaSel = document.getElementById('filtro-fecha-1min').value;
-      if (!fechaSel && modoPeriodo1Min === '1d') return;
-      let labels = [], laeqData = [], lamaxData = [];
+  const fechaSel = document.getElementById('filtro-fecha-1min').value;
+  if (!fechaSel && modoPeriodo1Min === '1d') return;
+  let labels = [], laeqData = [], lamaxData = [];
 
-      if (modoPeriodo1Min === '1d') {
-        const mapaMuestras = {};
-        datosBrutosGlobales.forEach(d => {
-          if (d.fechaStrCalendario === fechaSel) {
-            const horaClave = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
-            mapaMuestras[horaClave] = d;
-          }
-        });
-
-        // Rellena la plantilla diaria de 1,440 minutos para mostrar eje de 00:00 a 23:59
-        for (let h = 0; h < 24; h++) {
-          for (let m = 0; m < 60; m++) {
-            const horaFormateada = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-            labels.push(horaFormateada);
-            
-            if (mapaMuestras[horaFormateada]) {
-              laeqData.push(mapaMuestras[horaFormateada].LAeq_1min);
-              lamaxData.push(mapaMuestras[horaFormateada].LAmax_1min);
-            } else {
-              laeqData.push(null);
-              lamaxData.push(null);
-            }
-          }
-        }
-      } else {
-        const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
-        const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);
-        const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
-        filtrados.forEach(d => {
-          labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
-          laeqData.push(d.LAeq_1min);
-          lamaxData.push(d.LAmax_1min);
-        });
+  if (modoPeriodo1Min === '1d') {
+    const mapaMuestras = {};
+    datosBrutosGlobales.forEach(d => {
+      if (d.fechaStrCalendario === fechaSel) {
+        const horaClave = `${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`;
+        mapaMuestras[horaClave] = d;
       }
+    });
 
-      chartHistorial1Min.data.labels = labels;
-      chartHistorial1Min.data.datasets[0].data = laeqData;
-      chartHistorial1Min.data.datasets[1].data = lamaxData;
-      chartHistorial1Min.update();
-      actualizarTarjetasSuperiores(laeqData, lamaxData);
+    // Determina si la fecha seleccionada es HOY
+    const ahora = new Date();
+    const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+    const esHoy = (fechaSel === hoyStr);
+
+    // Si es hoy, limita la generación hasta el minuto transcurrido actual
+    const maxHora = esHoy ? ahora.getHours() : 23;
+    const maxMinuto = esHoy ? ahora.getMinutes() : 59;
+
+    for (let h = 0; h <= maxHora; h++) {
+      const limiteM = (h === maxHora) ? maxMinuto : 59;
+      for (let m = 0; m <= limiteM; m++) {
+        const horaFormateada = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        labels.push(horaFormateada);
+        
+        if (mapaMuestras[horaFormateada]) {
+          laeqData.push(mapaMuestras[horaFormateada].LAeq_1min);
+          lamaxData.push(mapaMuestras[horaFormateada].LAmax_1min);
+        } else {
+          laeqData.push(null);
+          lamaxData.push(null);
+        }
+      }
     }
+  } else {
+    const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
+    const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);
+    const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
+    filtrados.forEach(d => {
+      labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
+      laeqData.push(d.LAeq_1min);
+      lamaxData.push(d.LAmax_1min);
+    });
+  }
+
+  chartHistorial1Min.data.labels = labels;
+  chartHistorial1Min.data.datasets[0].data = laeqData;
+  chartHistorial1Min.data.datasets[1].data = lamaxData;
+  chartHistorial1Min.update('none'); // 'none' evita animaciones lentas durante el polling de 5s
+  actualizarTarjetasSuperiores(laeqData, lamaxData);
+}
 
     function cambiarPeriodo1Min(periodo) {
       modoPeriodo1Min = periodo;

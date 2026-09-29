@@ -29,9 +29,9 @@
       border: 2px solid #ffffff;
       transition: all 0.3s ease;
     }
-    .badge-verde { bg-color: #10b981; background: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.7); }
-    .badge-amarillo { bg-color: #f59e0b; background: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.7); }
-    .badge-rojo { bg-color: #ef4444; background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.7); }
+    .badge-verde { background: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.7); }
+    .badge-amarillo { background: #f59e0b; box-shadow: 0 0 10px rgba(245,158,11,0.7); }
+    .badge-rojo { background: #ef4444; box-shadow: 0 0 10px rgba(239,68,68,0.7); }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 font-sans min-h-screen">
@@ -94,6 +94,7 @@
             <p id="subtitulo-estacion" class="text-xs text-slate-400">Estación Seleccionada — Neiva, Huila</p>
           </div>
         </div>
+        
         <!-- SELECTOR GLOBAL DE NODO -->
         <div class="flex items-center gap-2 bg-slate-900/90 border border-indigo-500/50 p-1.5 rounded-xl shadow-md">
           <span class="text-xs text-indigo-400 font-bold pl-2 uppercase tracking-wider">Nodo:</span>
@@ -541,7 +542,7 @@
         }
       });
 
-      // GRÁFICA 2: DIA Y NOCHE
+      // GRÁFICA 2: DÍA Y NOCHE
       const ctx2 = document.getElementById('graficaLdLnDiaria').getContext('2d');
       chartLdLnDiaria = new Chart(ctx2, {
         type: 'bar',
@@ -652,18 +653,15 @@
       return 10 * Math.log10(sumaEnergetica / validos.length);
     }
 
-    function obtenerFechaOperacional(fechaObj) {
-      const anio = fechaObj.getFullYear();
-      const mes = String(fechaObj.getMonth() + 1).padStart(2, '0');
-      const dia = String(fechaObj.getDate()).padStart(2, '0');
-      const minTotales = fechaObj.getHours() * 60 + fechaObj.getMinutes();
-      
-      if (minTotales <= 420) {
-        const fechaAyer = new Date(fechaObj);
-        fechaAyer.setDate(fechaAyer.getDate() - 1);
-        return `${fechaAyer.getFullYear()}-${String(fechaAyer.getMonth() + 1).padStart(2, '0')}-${String(fechaAyer.getDate()).padStart(2, '0')}`;
+    function obtenerFechaOperacionalDesdeComponentes(fechaCalStr, hora, minuto) {
+      const minTotales = hora * 60 + minuto;
+      if (minTotales <= 420) { // Hasta las 07:00 AM pertenece al período nocturno del día anterior
+        const partes = fechaCalStr.split('-');
+        const f = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+        f.setDate(f.getDate() - 1);
+        return `${f.getFullYear()}-${String(f.getMonth() + 1).padStart(2, '0')}-${String(f.getDate()).padStart(2, '0')}`;
       }
-      return `${anio}-${mes}-${dia}`;
+      return fechaCalStr;
     }
 
     function esHorarioDiurno(hora, minuto) {
@@ -714,11 +712,13 @@
       renderizarVista1Min();
     }
 
+    // OBTENCIÓN DE DATOS CON ZONA HORARIA AMERICA/BOGOTA NORMALIZADA
     async function obtenerHistorial() {
       try {
         const urlNodo = `${BASE_URL_FIREBASE}${nodoSeleccionadoActual}/historial.json`;
         const res = await fetch(urlNodo);
         const data = await res.json();
+
         if (!data) {
           datosBrutosGlobales = [];
           actualizarTarjetaPrincipal(null);
@@ -729,23 +729,37 @@
           verificarEstadoConexion();
           return;
         }
+
         datosBrutosGlobales = [];
         let maxTimestamp = 0;
+
         Object.keys(data).forEach(key => {
           const item = data[key];
           if (item && item.timestamp && item.timestamp > 0) {
             const fechaObj = new Date(item.timestamp * 1000);
-            const fechaStrCalendario = `${fechaObj.getFullYear()}-${String(fechaObj.getMonth() + 1).padStart(2, '0')}-${String(fechaObj.getDate()).padStart(2, '0')}`;
-            const fechaStrOperacional = obtenerFechaOperacional(fechaObj);
             
+            // Forzar formateo a zona horaria local de Colombia (UTC-5)
+            const opcionesFecha = { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' };
+            const opcionesHora = { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false };
+
+            const partesFecha = new Intl.DateTimeFormat('en-CA', opcionesFecha).format(fechaObj); // "YYYY-MM-DD"
+            const partesHora = new Intl.DateTimeFormat('es-CO', opcionesHora).format(fechaObj).split(':');
+
+            const hora = parseInt(partesHora[0], 10);
+            const minuto = parseInt(partesHora[1], 10);
+
+            const fechaStrCalendario = partesFecha;
+            const fechaStrOperacional = obtenerFechaOperacionalDesdeComponentes(fechaStrCalendario, hora, minuto);
+
             if (item.timestamp > maxTimestamp) maxTimestamp = item.timestamp;
+
             datosBrutosGlobales.push({
               fechaObj: fechaObj,
               timestamp: item.timestamp,
               fechaStrCalendario: fechaStrCalendario,
               fechaStrOperacional: fechaStrOperacional,
-              hora: fechaObj.getHours(),
-              minuto: fechaObj.getMinutes(),
+              hora: hora,
+              minuto: minuto,
               lat: item.lat,
               lng: item.lng,
               LAeq_1min: item.LAeq_1min !== undefined ? Number(item.LAeq_1min) : null,
@@ -754,18 +768,17 @@
             });
           }
         });
+
         if (maxTimestamp > 0) ultimoRegistroTimestampMs = maxTimestamp * 1000;
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
 
-        // Obtener fecha de hoy en el sistema del cliente
-        const ahora = new Date();
-        const hoyFormateado = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+        // Obtener fecha actual en zona de Colombia
+        const hoyFormateado = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 
         if (datosBrutosGlobales.length > 0) {
           const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
           actualizarTarjetaPrincipal(ultimoRegistro);
-          
-          // Sincronización dinámica de fechas en selectores si el usuario no fijó una manualmente
+
           if (!fechaManualUsuario) {
             document.getElementById('filtro-fecha-1min').value = hoyFormateado;
           }
@@ -790,7 +803,7 @@
       }
     }
 
-    // FUNCIÓN DE EVOLUCIÓN TEMPORAL REINICIABLE A MEDIANOCHE Y EN TIEMPO REAL
+    // RENDERIZADO DEL GRÁFICO 1 MINUTO
     function renderizarVista1Min() {
       const inputFecha = document.getElementById('filtro-fecha-1min');
       const fechaSel = inputFecha.value;
@@ -807,14 +820,14 @@
           }
         });
 
-        // Validar tiempo presente
+        // Obtener la hora actual en zona de Colombia
         const ahora = new Date();
-        const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+        const hoyStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).format(ahora);
+        const partesHoraAhora = new Intl.DateTimeFormat('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit', hour12: false }).format(ahora).split(':');
+        
         const esHoy = (fechaSel === hoyStr);
-
-        // Limitar la serie hasta la hora/minuto en tiempo real si es el día en curso
-        const maxHora = esHoy ? ahora.getHours() : 23;
-        const maxMinuto = esHoy ? ahora.getMinutes() : 59;
+        const maxHora = esHoy ? parseInt(partesHoraAhora[0], 10) : 23;
+        const maxMinuto = esHoy ? parseInt(partesHoraAhora[1], 10) : 59;
 
         for (let h = 0; h <= maxHora; h++) {
           const limiteM = (h === maxHora) ? maxMinuto : 59;
@@ -845,7 +858,7 @@
       chartHistorial1Min.data.labels = labels;
       chartHistorial1Min.data.datasets[0].data = laeqData;
       chartHistorial1Min.data.datasets[1].data = lamaxData;
-      chartHistorial1Min.update('none'); // Actualización fluida sin animaciones lentas en polling
+      chartHistorial1Min.update('none');
       actualizarTarjetasSuperiores(laeqData, lamaxData);
     }
 

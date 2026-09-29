@@ -772,14 +772,19 @@
         datosBrutosGlobales.sort((a, b) => a.timestamp - b.timestamp);
 
         if (datosBrutosGlobales.length > 0) {
-          const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
-          actualizarTarjetaPrincipal(ultimoRegistro);
-          if (!document.getElementById('filtro-fecha-1min').value) document.getElementById('filtro-fecha-1min').value = ultimoRegistro.fechaStrOperacional;
-          if (!document.getElementById('filtro-fecha-ldln').value) document.getElementById('filtro-fecha-ldln').value = ultimoRegistro.fechaStrOperacional;
-          if (!document.getElementById('filtro-mes-ldln').value) document.getElementById('filtro-mes-ldln').value = ultimoRegistro.fechaStrOperacional.substring(0, 7);
-        } else {
-          actualizarTarjetaPrincipal(null);
-        }
+  const ultimoRegistro = datosBrutosGlobales[datosBrutosGlobales.length - 1];
+  actualizarTarjetaPrincipal(ultimoRegistro);
+  
+  // Actualizar la fecha del selector al día actual en cada recepción de datos
+  const hoyStr = ultimoRegistro.fechaStrCalendario;
+  const inputFecha = document.getElementById('filtro-fecha-1min');
+  
+  // Si no hay fecha o la fecha seleccionada era la de ayer, actualizar a hoy
+  if (!inputFecha.value || inputFecha.getAttribute('data-auto-today') === 'true') {
+    inputFecha.value = hoyStr;
+    inputFecha.setAttribute('data-auto-today', 'true');
+  }
+}
 
         renderizarVista1Min();
         renderizarVistaLdLnDiaria();

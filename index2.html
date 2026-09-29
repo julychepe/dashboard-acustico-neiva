@@ -795,9 +795,11 @@
     function renderizarVista1Min() {
   const fechaSel = document.getElementById('filtro-fecha-1min').value;
   if (!fechaSel && modoPeriodo1Min === '1d') return;
+
   let labels = [], laeqData = [], lamaxData = [];
 
   if (modoPeriodo1Min === '1d') {
+    // Indexar muestras por hora:minuto para la fecha seleccionada
     const mapaMuestras = {};
     datosBrutosGlobales.forEach(d => {
       if (d.fechaStrCalendario === fechaSel) {
@@ -806,12 +808,12 @@
       }
     });
 
-    // Determina si la fecha seleccionada es HOY
+    // Evaluar si la fecha seleccionada corresponde al día de hoy
     const ahora = new Date();
     const hoyStr = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
     const esHoy = (fechaSel === hoyStr);
 
-    // Si es hoy, limita la generación hasta el minuto transcurrido actual
+    // Si es hoy, graficar únicamente hasta la hora y minuto actuales
     const maxHora = esHoy ? ahora.getHours() : 23;
     const maxMinuto = esHoy ? ahora.getMinutes() : 59;
 
@@ -820,20 +822,21 @@
       for (let m = 0; m <= limiteM; m++) {
         const horaFormateada = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
         labels.push(horaFormateada);
-        
+
         if (mapaMuestras[horaFormateada]) {
           laeqData.push(mapaMuestras[horaFormateada].LAeq_1min);
           lamaxData.push(mapaMuestras[horaFormateada].LAmax_1min);
         } else {
-          laeqData.push(null);
-          lamaxData.push(null);
+          laeqData.push(null); // Hueco visual si el sensor no transmitió en ese minuto
         }
       }
     }
   } else {
+    // Lógica para rangos de 7 días o 30 días
     const diasLimite = modoPeriodo1Min === '7d' ? 7 : 30;
     const tLimite = Date.now() - (diasLimite * 24 * 3600 * 1000);
     const filtrados = datosBrutosGlobales.filter(d => d.timestamp * 1000 >= tLimite);
+
     filtrados.forEach(d => {
       labels.push(`${d.fechaStrCalendario.substring(5)} ${String(d.hora).padStart(2, '0')}:${String(d.minuto).padStart(2, '0')}`);
       laeqData.push(d.LAeq_1min);
@@ -844,7 +847,8 @@
   chartHistorial1Min.data.labels = labels;
   chartHistorial1Min.data.datasets[0].data = laeqData;
   chartHistorial1Min.data.datasets[1].data = lamaxData;
-  chartHistorial1Min.update('none'); // 'none' evita animaciones lentas durante el polling de 5s
+  chartHistorial1Min.update('none'); // Se actualiza sin animaciones bruscas
+
   actualizarTarjetasSuperiores(laeqData, lamaxData);
 }
 

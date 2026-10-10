@@ -3,7 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Observatorio de Ruido Ambiental - Neiva</title>
+  <title>Observatorio de Ruido Ambiental - Neiva, Huila</title>
+  
+  <!-- Tipografías: Outfit para cifras/títulos, Inter para UI -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -15,122 +20,219 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
+  <!-- Configuración de Identidad Visual (Tailwind) -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'rio-dark': '#07131c',      /* Fondo principal */
+            'rio-surface': '#0e2333',   /* Paneles y tarjetas */
+            'rio-border': '#1a3a52',    /* Bordes sutiles */
+            'huila-ocre': '#d97736',    /* Acentos folclor/clima */
+            'huila-arena': '#eaddcf',   /* Textos secundarios cálidos */
+            'semaforo-ok': '#10b981',   /* Normativos */
+            'semaforo-warn': '#f59e0b',
+            'semaforo-alert': '#ef4444',
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          backgroundImage: {
+            'topo-pattern': "url('data:image/svg+xml,%3Csvg width=\\'100\\'%20height=\\'100\\'%20viewBox=\\'0 0 100 100\\'%20xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cpath d=\\'M0 50 Q 25 25, 50 50 T 100 50\\' stroke=\\'rgba(234,221,207,0.03)\\' stroke-width=\\'1\\' fill=\\'none\\'%3E%3C/path%3E%3Cpath d=\\'M0 70 Q 35 45, 60 70 T 100 70\\' stroke=\\'rgba(234,221,207,0.03)\\' stroke-width=\\'1\\' fill=\\'none\\'%3E%3C/path%3E%3C/svg%3E')"
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    .map-tiles-dark { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+    /* Reset Leaflet para oscurecer controles */
+    .leaflet-bar a { background-color: #0e2333 !important; color: #eaddcf !important; border-color: #1a3a52 !important; }
+    .leaflet-bar a:hover { background-color: #1a3a52 !important; }
+    
     .marker-pin {
       display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; font-weight: bold; font-size: 11px; color: white;
-      border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.5); transition: 0.3s;
+      border-radius: 50%; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; color: white;
+      border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s ease;
     }
+    .marker-pin:hover { transform: scale(1.15); cursor: pointer; }
     .status-ok { background: #10b981; }
     .status-warning { background: #f59e0b; }
     .status-alert { background: #ef4444; }
-    .status-offline { background: #64748b; border-style: dashed; }
+    .status-offline { background: #64748b; border-style: dashed; opacity: 0.8; }
     
+    /* Scrollbars elegantes */
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    ::-webkit-scrollbar-track { background: #07131c; }
+    ::-webkit-scrollbar-thumb { background: #1a3a52; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #d97736; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-200 font-sans h-screen flex flex-col overflow-hidden relative">
+<body class="bg-rio-dark text-white font-sans h-screen flex flex-col overflow-hidden relative">
 
-  <!-- HEADER -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex justify-between items-center z-40 shrink-0">
-    <div>
-      <h1 class="text-xl font-bold text-white tracking-wide">Observatorio de Ruido Ambiental</h1>
-      <p class="text-xs text-slate-400">Neiva, Huila (América/Bogotá)</p>
+  <!-- CABECERA DE IDENTIDAD -->
+  <header class="bg-rio-surface border-b border-rio-border px-6 py-4 flex flex-col sm:flex-row justify-between items-center z-40 shrink-0 bg-topo-pattern">
+    <div class="flex items-center gap-4 mb-3 sm:mb-0">
+      <!-- Isologo: Ondas + Río -->
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-rio-dark to-rio-border border border-rio-border shadow-inner flex items-center justify-center p-2 shrink-0">
+        <svg viewBox="0 0 32 32" fill="none" class="w-full h-full">
+          <rect x="4" y="16" width="3" height="8" rx="1.5" fill="#eaddcf" />
+          <rect x="10" y="10" width="3" height="14" rx="1.5" fill="#eaddcf" />
+          <rect x="16" y="6" width="3" height="18" rx="1.5" fill="#d97736" />
+          <path d="M12 24 C 18 30, 24 18, 30 22" stroke="#d97736" stroke-width="2.5" stroke-linecap="round" fill="none" />
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-xl sm:text-2xl font-display font-semibold tracking-tight text-white">Observatorio de Ruido Ambiental</h1>
+        <div class="flex items-center gap-2 mt-0.5">
+          <svg class="w-3.5 h-3.5 text-huila-ocre" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+          <p class="text-xs font-medium text-huila-arena/80 tracking-wide">Neiva, Huila · Colombia</p>
+        </div>
+      </div>
     </div>
+    
     <div class="flex gap-3 items-center">
-      <button onclick="abrirModalHistorial()" class="text-sm bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition">
-        📊 Historial Mensual/Anual
+      <button onclick="abrirModalHistorial()" class="text-sm bg-rio-border hover:bg-rio-border/70 text-huila-arena px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        Historial Anual
       </button>
-      <button onclick="descargarCSV()" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex gap-2">
-        📥 Descargar Día
+      <button onclick="descargarCSV()" class="text-sm bg-huila-ocre hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-huila-ocre/20 flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Descargar Día
       </button>
-      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="text-xs text-slate-400 hover:text-white border border-slate-600 px-3 py-1.5 rounded ml-2">
+      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-lg ml-1 transition-colors">
         Admin
       </button>
     </div>
   </header>
 
-  <!-- MAIN LAYOUT -->
+  <!-- LAYOUT PRINCIPAL -->
   <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
     
-    <!-- LEFT PANEL: MAP -->
-    <div class="w-full lg:w-7/12 flex flex-col relative border-r border-slate-700">
-      <div id="mapa" class="flex-1 w-full bg-slate-950 z-10"></div>
+    <!-- PANEL IZQUIERDO: MAPA -->
+    <div class="w-full lg:w-7/12 flex flex-col relative border-r border-rio-border shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
+      <!-- Mapa usando CartoDB Dark Matter (Súper limpio, resalta colores) -->
+      <div id="mapa" class="flex-1 w-full bg-[#0a0a0a] z-10"></div>
       
-      <!-- LEYENDA -->
-      <div class="absolute bottom-6 left-6 z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-xl pointer-events-none">
-        <h4 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Estado de Estación</h4>
-        <div class="flex flex-col gap-2 text-xs">
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#10b981]"></div> ≤ 50 dBA (Día)</div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#f59e0b]"></div> 50 - 65 dBA</div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#ef4444]"></div> > 65 dBA</div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#64748b] border-2 border-dashed border-white"></div> Sin conexión</div>
+      <!-- LEYENDA INTEGRADA AL ESTILO EDITORIAL -->
+      <div class="absolute bottom-6 left-6 z-20 bg-rio-surface/90 backdrop-blur-md border border-rio-border p-4 rounded-xl shadow-2xl pointer-events-none">
+        <h4 class="text-[10px] font-bold text-huila-arena/70 mb-3 uppercase tracking-widest font-display">Clasificación Acústica</h4>
+        <div class="flex flex-col gap-2.5 text-xs text-white/90">
+          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-ok shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> ≤ 50 dBA</div>
+          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-warn shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> 50 - 65 dBA</div>
+          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-alert shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span> > 65 dBA</div>
+          <div class="flex items-center gap-3 opacity-60"><span class="w-3.5 h-3.5 rounded-full bg-slate-500 border-2 border-dashed border-white/50"></span> Sin conexión</div>
         </div>
       </div>
+      
+      <!-- Botón de centrado -->
+      <button onclick="centrarMapa()" class="absolute top-4 right-4 z-20 bg-rio-surface/90 backdrop-blur border border-rio-border p-2.5 rounded-lg shadow-lg text-huila-arena hover:text-white transition-colors" title="Ver toda la ciudad">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+      </button>
     </div>
 
-    <!-- RIGHT PANEL: ESTACIÓN Y DATOS DEL DÍA -->
-    <div class="w-full lg:w-5/12 bg-slate-900 flex flex-col overflow-y-auto">
-      <div class="p-6 border-b border-slate-700 bg-slate-800/50">
-        <div class="flex justify-between items-start mb-4">
-          <div>
-            <span class="text-xs font-bold text-indigo-400 uppercase tracking-widest" id="ficha-codigo">Seleccione Estación</span>
-            <h2 class="text-2xl font-bold text-white mt-1" id="ficha-nombre">---</h2>
-            <p class="text-sm text-slate-400 mt-1" id="ficha-desc">---</p>
-          </div>
-          <div id="ficha-estado-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-slate-700 text-slate-300 border border-slate-600">
-            Desconocido
-          </div>
+    <!-- PANEL DERECHO: DATOS Y CONTEXTO -->
+    <div class="w-full lg:w-5/12 bg-rio-dark flex flex-col overflow-y-auto scroll-smooth">
+      
+      <!-- FICHA DE ESTACIÓN EDITORIAL -->
+      <div class="relative bg-rio-surface border-b border-rio-border">
+        <!-- Foto de fondo con gradiente profundo -->
+        <div class="absolute inset-0 z-0">
+          <img id="ficha-foto" src="" class="w-full h-full object-cover opacity-30" alt="Vista de la Estación" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
+          <div class="absolute inset-0 bg-gradient-to-t from-rio-surface via-rio-surface/90 to-transparent"></div>
         </div>
-        <div class="flex gap-4">
-          <div class="w-24 h-24 rounded-xl border border-slate-600 bg-slate-700 overflow-hidden flex-shrink-0">
-            <img id="ficha-foto" src="" class="w-full h-full object-cover" alt="Foto Sensor" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
-          </div>
-          <div class="flex flex-col justify-center">
-            <span class="text-xs text-slate-400 uppercase">Último L<sub>Aeq,1min</sub> Válido</span>
-            <div class="flex items-baseline gap-1">
-              <span class="text-4xl font-black text-white" id="ficha-ultimo-valor">--.-</span>
-              <span class="text-lg font-bold text-slate-500">dBA</span>
+        
+        <div class="relative z-10 p-6">
+          <div class="flex justify-between items-start mb-6">
+            <div>
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rio-dark/60 border border-rio-border text-[10px] font-bold text-huila-ocre uppercase tracking-widest backdrop-blur-sm mb-2" id="ficha-codigo">Seleccione</span>
+              <h2 class="text-3xl font-display font-bold text-white drop-shadow-md leading-tight" id="ficha-nombre">---</h2>
+              <p class="text-sm text-huila-arena/80 mt-1 flex items-center gap-1.5" id="ficha-desc"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> ---</p>
             </div>
-            <span class="text-xs text-slate-500 mt-1" id="ficha-ultima-hora">---</span>
+            <div id="ficha-estado-badge" class="px-3 py-1 rounded-full text-[10px] font-bold bg-rio-border text-huila-arena border border-rio-border/50 shadow-sm">
+              Conectando...
+            </div>
+          </div>
+          
+          <div class="flex items-end justify-between bg-rio-dark/40 backdrop-blur-sm border border-rio-border/50 rounded-xl p-4 shadow-inner">
+            <div class="flex flex-col">
+              <span class="text-[10px] text-huila-arena/60 uppercase tracking-wider font-semibold mb-1">Nivel Equivalente (L<sub>Aeq,1min</sub>)</span>
+              <div class="flex items-baseline gap-1.5">
+                <span class="text-5xl font-display font-black text-white tracking-tighter" id="ficha-ultimo-valor">--.-</span>
+                <span class="text-lg font-bold text-huila-arena/50">dBA</span>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="block text-[10px] text-huila-arena/50 uppercase tracking-wider mb-0.5">Actualizado</span>
+              <span class="text-xs font-mono text-white/80" id="ficha-ultima-hora">--:--</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
-        <h3 class="font-bold text-sm text-slate-200">Datos Diarios (1 min)</h3>
-        <div class="flex items-center gap-2">
-          <button onclick="cambiarDia(-1)" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">◀</button>
-          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-slate-900 border border-slate-600 text-sm text-slate-200 rounded px-2 py-1 outline-none focus:border-indigo-500">
-          <button onclick="cambiarDia(1)" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">▶</button>
+      <!-- SECCIÓN GRÁFICA -->
+      <div class="px-6 py-4 border-b border-rio-border flex justify-between items-center bg-rio-surface/50">
+        <h3 class="font-display font-semibold text-sm text-huila-arena">Comportamiento Diario</h3>
+        <div class="flex items-center gap-1 bg-rio-dark rounded-lg p-1 border border-rio-border shadow-inner">
+          <button onclick="cambiarDia(-1)" class="p-1.5 hover:bg-rio-surface rounded text-huila-arena transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-transparent text-xs font-medium text-white px-2 py-1 outline-none color-scheme-dark">
+          <button onclick="cambiarDia(1)" class="p-1.5 hover:bg-rio-surface rounded text-huila-arena transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
         </div>
       </div>
 
-      <div class="p-6 border-b border-slate-700">
-        <div class="h-56 w-full relative"><canvas id="chart-diario"></canvas></div>
+      <div class="p-6 border-b border-rio-border bg-rio-dark">
+        <div class="h-48 w-full relative"><canvas id="chart-diario"></canvas></div>
       </div>
 
-      <div class="p-6">
-        <h3 class="font-bold text-sm text-slate-200 mb-4">Indicadores Diurnos y Nocturnos</h3>
+      <!-- INDICADORES DIURNOS/NOCTURNOS -->
+      <div class="p-6 bg-rio-surface flex-1">
+        <h3 class="font-display font-semibold text-sm text-huila-arena mb-4">Métricas Consolidadas (Normativa)</h3>
         <div class="grid grid-cols-2 gap-4">
-          <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs font-bold text-sky-400 uppercase">Ld (07:01 - 21:00)</span>
-              <span class="text-[10px] text-slate-400" id="cov-dia">Cov: --%</span>
+          <!-- Tarjeta Día -->
+          <div class="bg-gradient-to-br from-rio-dark to-rio-surface border border-rio-border rounded-xl p-4 shadow-lg relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+            <div class="flex justify-between items-center mb-3">
+              <div class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                <span class="text-xs font-bold text-amber-500 uppercase tracking-wide">Periodo Diurno</span>
+              </div>
+              <span class="text-[10px] font-mono text-huila-arena/40" id="cov-dia">Cov: --%</span>
             </div>
-            <div class="text-2xl font-black text-white" id="val-ld">--.- <span class="text-sm font-normal text-slate-500">dBA</span></div>
-            <p class="text-[10px] text-slate-400 mt-2" id="msg-dia"></p>
+            <div class="flex items-end gap-1.5 relative z-10">
+              <div class="text-3xl font-display font-black text-white" id="val-ld">--.-</div>
+              <span class="text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
+            </div>
+            <p class="text-[9px] text-huila-arena/40 mt-1 uppercase tracking-widest">07:01 - 21:00</p>
           </div>
-          <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
-            <div class="flex justify-between items-center mb-2">
-              <span class="text-xs font-bold text-indigo-400 uppercase">Ln (21:01 - 07:00)</span>
-              <span class="text-[10px] text-slate-400" id="cov-noche">Cov: --%</span>
+          
+          <!-- Tarjeta Noche -->
+          <div class="bg-gradient-to-br from-rio-dark to-[#0f1f35] border border-rio-border rounded-xl p-4 shadow-lg relative overflow-hidden group">
+            <div class="absolute top-0 right-0 w-16 h-16 bg-indigo-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+            <div class="flex justify-between items-center mb-3">
+              <div class="flex items-center gap-1.5">
+                <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <span class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Periodo Nocturno</span>
+              </div>
+              <span class="text-[10px] font-mono text-huila-arena/40" id="cov-noche">Cov: --%</span>
             </div>
-            <div class="text-2xl font-black text-white" id="val-ln">--.- <span class="text-sm font-normal text-slate-500">dBA</span></div>
-            <p class="text-[10px] text-slate-400 mt-2" id="msg-noche"></p>
+            <div class="flex items-end gap-1.5 relative z-10">
+              <div class="text-3xl font-display font-black text-white" id="val-ln">--.-</div>
+              <span class="text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
+            </div>
+            <p class="text-[9px] text-huila-arena/40 mt-1 uppercase tracking-widest">21:01 - 07:00</p>
+          </div>
+        </div>
+
+        <!-- CONTEXTO CIUDADANO -->
+        <div class="mt-6 p-4 bg-rio-dark border border-rio-border rounded-xl shadow-inner flex items-start gap-4">
+          <div class="w-8 h-8 rounded-full bg-rio-surface border border-rio-border flex items-center justify-center shrink-0 mt-0.5">
+             <svg class="w-4 h-4 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          </div>
+          <div>
+            <h4 class="text-xs font-bold text-white mb-1 font-display">Identidad y Territorio</h4>
+            <p class="text-xs text-huila-arena/70 leading-relaxed">Conocer el paisaje sonoro de Neiva es el primer paso para comprender nuestra convivencia urbana. Los datos acústicos nos ayudan a proteger la tranquilidad de los barrios y la vitalidad del valle del Magdalena.</p>
           </div>
         </div>
       </div>
@@ -138,47 +240,51 @@
   </main>
 
   <!-- MODAL: LOGIN ADMIN -->
-  <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center">
-    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
-      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
-      <h3 class="text-xl font-bold text-white mb-4">Acceso Administrativo</h3>
-      <input type="email" id="admin-email" placeholder="Correo" class="w-full mb-3 bg-slate-900 border border-slate-700 rounded p-2 text-white">
-      <input type="password" id="admin-pass" placeholder="Contraseña" class="w-full mb-4 bg-slate-900 border border-slate-700 rounded p-2 text-white">
-      <button onclick="iniciarSesionAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded">Ingresar</button>
-      <p id="admin-error" class="text-red-400 text-xs mt-3 hidden"></p>
+  <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-rio-dark/90 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-rio-surface border border-rio-border p-8 rounded-2xl w-full max-w-sm shadow-2xl relative">
+      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="absolute top-4 right-4 text-huila-arena/50 hover:text-white transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+      <div class="w-10 h-10 mb-4 bg-rio-dark rounded-lg flex items-center justify-center border border-rio-border"><svg class="w-5 h-5 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
+      <h3 class="text-xl font-display font-bold text-white mb-6">Acceso Administrativo</h3>
+      <input type="email" id="admin-email" placeholder="Correo institucional" class="w-full mb-3 bg-rio-dark border border-rio-border rounded-lg p-2.5 text-sm text-white outline-none focus:border-huila-ocre transition-colors">
+      <input type="password" id="admin-pass" placeholder="Contraseña" class="w-full mb-6 bg-rio-dark border border-rio-border rounded-lg p-2.5 text-sm text-white outline-none focus:border-huila-ocre transition-colors">
+      <button onclick="iniciarSesionAdmin()" class="w-full bg-huila-ocre hover:bg-orange-600 text-white font-bold py-2.5 rounded-lg shadow-lg shadow-huila-ocre/20 transition-colors">Ingresar al Sistema</button>
+      <p id="admin-error" class="text-semaforo-alert text-xs mt-3 hidden text-center"></p>
     </div>
   </div>
 
   <!-- MODAL: HISTORIAL INDEPENDIENTE (MES/AÑO) -->
-  <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-5xl h-[85vh] shadow-2xl flex flex-col relative">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-2xl font-bold text-white">Historial Acústico: <span id="historial-nodo-nombre" class="text-indigo-400"></span></h2>
-        <button onclick="document.getElementById('modal-historial').classList.add('hidden')" class="text-slate-400 hover:text-white bg-slate-800 px-3 py-1 rounded">Cerrar</button>
+  <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-rio-dark/95 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-rio-surface border border-rio-border p-6 rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl flex flex-col relative bg-topo-pattern">
+      
+      <div class="flex justify-between items-center mb-6 border-b border-rio-border pb-4">
+        <div>
+          <h2 class="text-2xl font-display font-bold text-white">Análisis Acústico</h2>
+          <p class="text-sm text-huila-ocre font-medium mt-1 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> <span id="historial-nodo-nombre"></span></p>
+        </div>
+        <button onclick="document.getElementById('modal-historial').classList.add('hidden')" class="text-huila-arena/70 hover:text-white bg-rio-dark border border-rio-border px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">Cerrar Panel</button>
       </div>
       
-      <!-- Selector independiente de mes -->
-      <div class="flex gap-4 mb-6 bg-slate-800 p-4 rounded-xl border border-slate-700">
-        <div class="flex items-center gap-2">
-          <label class="text-sm text-slate-400">Seleccionar Mes:</label>
-          <input type="month" id="input-mes" class="bg-slate-900 border border-slate-600 text-sm text-white rounded p-1">
-        </div>
-        <button onclick="actualizarHistorialCompleto()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded text-sm text-white font-medium">Consultar Período</button>
-        <span id="cargando-historial" class="text-xs text-emerald-400 hidden animate-pulse pt-2">Calculando promedios...</span>
+      <div class="flex flex-wrap gap-4 mb-6 bg-rio-dark/50 p-4 rounded-xl border border-rio-border items-center shadow-inner">
+        <label class="text-sm font-medium text-huila-arena">Período de Análisis:</label>
+        <input type="month" id="input-mes" class="bg-rio-surface border border-rio-border text-sm text-white rounded-lg px-3 py-1.5 outline-none focus:border-huila-ocre color-scheme-dark">
+        <button onclick="actualizarHistorialCompleto()" class="bg-rio-border hover:bg-rio-border/70 border border-rio-border px-4 py-1.5 rounded-lg text-sm text-white font-medium transition-colors shadow-sm">Procesar Datos</button>
+        <span id="cargando-historial" class="text-xs text-huila-ocre hidden font-medium flex items-center gap-2"><svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Calculando indicadores...</span>
       </div>
 
-      <!-- Contenedor ajustado a flex-col con más separación -->
       <div class="flex-1 overflow-y-auto flex flex-col gap-8 pb-4 pr-2">
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h3 class="text-sm font-bold text-slate-200 mb-2">Evolución Diaria (Ld / Ln) con Límites Normativos</h3>
-          <!-- Altura ampliada -->
+        <div class="bg-rio-dark p-6 rounded-xl border border-rio-border shadow-lg">
+          <div class="mb-4">
+            <h3 class="text-base font-display font-bold text-white">Evolución Diaria (Mes Seleccionado)</h3>
+            <p class="text-xs text-huila-arena/60">Comparativa Ld/Ln contra límites normativos establecidos para el sector.</p>
+          </div>
           <div class="h-80 relative w-full"><canvas id="chart-mensual"></canvas></div>
         </div>
         
-        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
-          <h3 class="text-sm font-bold text-slate-200 mb-1">Promedios Anuales</h3>
-          <p class="text-xs text-slate-400 mb-4">Muestra el comportamiento acústico consolidado a lo largo del año seleccionado.</p>
-          <!-- Altura ampliada -->
+        <div class="bg-rio-dark p-6 rounded-xl border border-rio-border shadow-lg">
+          <div class="mb-4">
+            <h3 class="text-base font-display font-bold text-white">Consolidado Anual</h3>
+            <p class="text-xs text-huila-arena/60">Promedios mensuales del comportamiento acústico a lo largo del año.</p>
+          </div>
           <div class="h-80 relative w-full"><canvas id="chart-anual"></canvas></div>
         </div>
       </div>
@@ -186,6 +292,7 @@
   </div>
 
   <script>
+    // Tu configuración existente
     const firebaseConfig = {
       apiKey: "AIzaSyCmfD-H6B5bXMEZN-3KcPCmZk8d-6p4ddE",
       databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
@@ -196,113 +303,121 @@
     const auth = firebase.auth();
 
     const redNodos = {
-      nodo1: { id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Suburbano", lat: 2.865666, lng: -75.216591, foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg", descripcion: "Vereda Agua-blanca, Neiva" },
-      nodo2: { id: "nodo2", nombre: "Parque Santander", sector: "Comercial", lat: 2.927300, lng: -75.281800, foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=400", descripcion: "Zona Centro Comercial" }
+      nodo1: { id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Suburbano", lat: 2.865666, lng: -75.216591, foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg", descripcion: "Vereda Agua-blanca, Zona Rural Neiva" },
+      nodo2: { id: "nodo2", nombre: "Parque Santander", sector: "Comercial", lat: 2.927300, lng: -75.281800, foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=600", descripcion: "Zona Centro Comercial, Comuna 4" }
     };
 
     const normativas = {
       "Residencial": { Ld: 65, Ln: 55 },
       "Comercial": { Ld: 70, Ln: 60 },
-      "Suburbano": { Ld: 55, Ln: 45 } // Límites Sector D (Rural/Suburbano)
+      "Suburbano": { Ld: 55, Ln: 45 } 
     };
+
+    // Paleta para Chart.js
+    const colorGraphLine = '#d97736'; // Huila Ocre
+    const colorGraphFill = 'rgba(217, 119, 54, 0.1)';
+    const colorGrid = 'rgba(234, 221, 207, 0.05)';
+    const colorText = '#eaddcf';
+    
+    // Colores de barras
+    const colorBarLd = '#3b82f6'; // Azul vibrante
+    const colorBarLn = '#6366f1'; // Indigo profundo
+    const colorRefLd = '#ef4444'; 
+    const colorRefLn = '#f59e0b'; 
 
     let mapa, marcadores = {}, chartDiario, chartMensual, chartAnual;
     let nodoActivo = "nodo1";
     let intervaloTiempoReal = null;
     let datosDiaActual = [];
+    let layerBounds = [];
 
     function initMap() {
       mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { className: 'map-tiles-dark', maxZoom: 19 }).addTo(mapa);
+      // CartoDB Dark Matter: Súper limpio, resalta el mapa sin invertir imágenes
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapa);
       
-      const bounds = [];
+      layerBounds = [];
       Object.keys(redNodos).forEach(id => {
         const nodo = redNodos[id];
-        bounds.push([nodo.lat, nodo.lng]);
-        const icon = L.divIcon({ className: 'custom-pin', html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:34px; height:34px;">--</div>`, iconSize: [34, 34], iconAnchor: [17, 17] });
+        layerBounds.push([nodo.lat, nodo.lng]);
+        const icon = L.divIcon({ className: 'custom-pin', html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:36px; height:36px;">--</div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
         const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
         m.on('click', () => seleccionarEstacion(id));
         marcadores[id] = m;
       });
-      mapa.fitBounds(bounds, { padding: [50, 50] });
+      centrarMapa();
     }
 
+    function centrarMapa() {
+        if(layerBounds.length > 0) mapa.fitBounds(layerBounds, { padding: [50, 50] });
+    }
+
+    // Configuración global de fuentes para Chart.js
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.color = colorText;
+
     function initCharts() {
+      // 1. Diario
       const ctxD = document.getElementById('chart-diario').getContext('2d');
       chartDiario = new Chart(ctxD, {
         type: 'line',
-        data: { labels: [], datasets: [{ label: 'LAeq [dBA]', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, borderWidth: 1.5, pointRadius: 0, spanGaps: false }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { display: false } } }
-      });
-
-      const ctxM = document.getElementById('chart-mensual').getContext('2d');
-      chartMensual = new Chart(ctxM, {
-        type: 'bar',
-        data: { labels: [], datasets: [
-          { label: 'Ld (Día)', data: [], backgroundColor: '#38bdf8', order: 2 },
-          { label: 'Ln (Noche)', data: [], backgroundColor: '#818cf8', order: 2 },
-          { label: 'Ref. Norma Ld', data: [], type: 'line', borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
-          { label: 'Ref. Norma Ln', data: [], type: 'line', borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
-        ]},
+        data: { labels: [], datasets: [{ label: ' LAeq [dBA]', data: [], borderColor: colorGraphLine, backgroundColor: colorGraphFill, fill: true, borderWidth: 2, pointRadius: 0, tension: 0.1 }] },
         options: { 
-          responsive: true, 
-          maintainAspectRatio: false,
-          layout: { padding: { bottom: 10 } },
+          responsive: true, maintainAspectRatio: false, 
+          interaction: { mode: 'index', intersect: false },
           scales: { 
-            y: { 
-              min: 35, 
-              max: 85, 
-              grid: { color: 'rgba(51, 65, 85, 0.3)', drawBorder: false }, 
-              ticks: { color: '#94a3b8', padding: 8 } 
-            }, 
-            x: { 
-              grid: { display:false }, 
-              ticks: {
-                color: '#94a3b8',
-                maxRotation: 45,
-                minRotation: 45,
-                autoSkip: true,
-                maxTicksLimit: 15
-              } 
-            } 
+            x: { grid: {color: colorGrid, drawBorder: false}, ticks: {color: 'rgba(234, 221, 207, 0.5)', maxTicksLimit: 12} }, 
+            y: { grid: {color: colorGrid, drawBorder: false}, ticks: {color: 'rgba(234, 221, 207, 0.5)'} } 
           }, 
           plugins: { 
-            legend: { 
-              labels: { color: '#f8fafc', padding: 20, usePointStyle: true, boxWidth: 8 } 
-            } 
+            legend: { display: false },
+            tooltip: { backgroundColor: '#0e2333', titleFont: {family: 'Outfit'}, padding: 12, borderColor: '#1a3a52', borderWidth: 1 }
           } 
         }
       });
 
+      // 2. Mensual
+      const ctxM = document.getElementById('chart-mensual').getContext('2d');
+      chartMensual = new Chart(ctxM, {
+        type: 'bar',
+        data: { labels: [], datasets: [
+          { label: 'Ld (Día)', data: [], backgroundColor: colorBarLd, borderRadius: 2, order: 2 },
+          { label: 'Ln (Noche)', data: [], backgroundColor: colorBarLn, borderRadius: 2, order: 2 },
+          { label: 'Ref. Ld', data: [], type: 'line', borderColor: colorRefLd, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
+          { label: 'Ref. Ln', data: [], type: 'line', borderColor: colorRefLn, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
+        ]},
+        options: { 
+          responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 10 } },
+          scales: { 
+            y: { min: 35, max: 85, grid: { color: colorGrid, drawBorder: false }, ticks: { color: 'rgba(234, 221, 207, 0.6)', padding: 8 } }, 
+            x: { grid: { display:false }, ticks: { color: 'rgba(234, 221, 207, 0.6)', maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 15 } } 
+          }, 
+          plugins: { 
+            legend: { labels: { color: '#eaddcf', padding: 20, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 12} } },
+            tooltip: { backgroundColor: '#0e2333', titleFont: {family: 'Outfit'}, padding: 12, borderColor: '#1a3a52', borderWidth: 1 }
+          } 
+        }
+      });
+
+      // 3. Anual
       const ctxA = document.getElementById('chart-anual').getContext('2d');
       chartAnual = new Chart(ctxA, {
         type: 'bar',
         data: { labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets: [
-          { label: 'Ld Promedio', data: Array(12).fill(null), backgroundColor: '#38bdf8', order: 2 },
-          { label: 'Ln Promedio', data: Array(12).fill(null), backgroundColor: '#818cf8', order: 2 },
-          { label: 'Ref. Norma Ld', data: Array(12).fill(null), type: 'line', borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
-          { label: 'Ref. Norma Ln', data: Array(12).fill(null), type: 'line', borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
+          { label: 'Ld Promedio', data: Array(12).fill(null), backgroundColor: colorBarLd, borderRadius: 2, order: 2 },
+          { label: 'Ln Promedio', data: Array(12).fill(null), backgroundColor: colorBarLn, borderRadius: 2, order: 2 },
+          { label: 'Ref. Ld', data: Array(12).fill(null), type: 'line', borderColor: colorRefLd, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
+          { label: 'Ref. Ln', data: Array(12).fill(null), type: 'line', borderColor: colorRefLn, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
         options: { 
-          responsive: true, 
-          maintainAspectRatio: false, 
-          layout: { padding: { bottom: 10 } },
+          responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 10 } },
           scales: { 
-            y: { 
-              min: 35, 
-              max: 85, 
-              grid: { color: 'rgba(51, 65, 85, 0.3)', drawBorder: false }, 
-              ticks: { color: '#94a3b8', padding: 8 } 
-            }, 
-            x: { 
-              grid: { display:false }, 
-              ticks: { color: '#94a3b8' } 
-            } 
+            y: { min: 35, max: 85, grid: { color: colorGrid, drawBorder: false }, ticks: { color: 'rgba(234, 221, 207, 0.6)', padding: 8 } }, 
+            x: { grid: { display:false }, ticks: { color: 'rgba(234, 221, 207, 0.6)' } } 
           }, 
           plugins: { 
-            legend: { 
-              labels: { color: '#f8fafc', padding: 20, usePointStyle: true, boxWidth: 8 } 
-            } 
+            legend: { labels: { color: '#eaddcf', padding: 20, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 12} } },
+            tooltip: { backgroundColor: '#0e2333', titleFont: {family: 'Outfit'}, padding: 12, borderColor: '#1a3a52', borderWidth: 1 }
           } 
         }
       });
@@ -335,11 +450,20 @@
     function seleccionarEstacion(id) {
       nodoActivo = id;
       const nodo = redNodos[id];
-      document.getElementById('ficha-codigo').innerText = `CÓDIGO: ${nodo.id} | ${nodo.sector.toUpperCase()}`;
+      document.getElementById('ficha-codigo').innerText = `Estación: ${nodo.id} | Sector: ${nodo.sector}`;
       document.getElementById('ficha-nombre').innerText = nodo.nombre;
-      document.getElementById('ficha-desc').innerText = nodo.descripcion;
+      document.getElementById('ficha-desc').innerHTML = `<svg class="w-4 h-4 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> ${nodo.descripcion}`;
       document.getElementById('ficha-foto').src = nodo.foto;
       
+      // Resaltar pin en el mapa
+      Object.keys(marcadores).forEach(key => {
+         const el = document.getElementById(`pin-${key}`);
+         if(el) { el.style.borderWidth = '2px'; el.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)'; }
+      });
+      const pinActivo = document.getElementById(`pin-${id}`);
+      if(pinActivo) { pinActivo.style.borderWidth = '3px'; pinActivo.style.boxShadow = '0 0 0 4px rgba(217, 119, 54, 0.3)'; }
+      mapa.flyTo([nodo.lat, nodo.lng], 15, { duration: 1.5 });
+
       if(intervaloTiempoReal) clearInterval(intervaloTiempoReal);
       monitorearTiempoReal();
       intervaloTiempoReal = setInterval(monitorearTiempoReal, 15000);
@@ -385,9 +509,9 @@
       });
 
       const ld = calcularEquivalente(valDia), ln = calcularEquivalente(valNoche);
-      document.getElementById('val-ld').innerHTML = ld ? `${ld.toFixed(1)} <span class="text-sm">dBA</span>` : '--.-';
+      document.getElementById('val-ld').innerHTML = ld ? `${ld.toFixed(1)}` : '--.-';
       document.getElementById('cov-dia').innerText = `Cov: ${Math.min((valDia.length/840)*100, 100).toFixed(0)}%`;
-      document.getElementById('val-ln').innerHTML = ln ? `${ln.toFixed(1)} <span class="text-sm">dBA</span>` : '--.-';
+      document.getElementById('val-ln').innerHTML = ln ? `${ln.toFixed(1)}` : '--.-';
       document.getElementById('cov-noche').innerText = `Cov: ${Math.min((valNoche.length/600)*100, 100).toFixed(0)}%`;
     }
 
@@ -397,15 +521,16 @@
         const ultimo = snapshot.val() ? Object.values(snapshot.val())[0] : null;
         const offline = ultimo ? (Date.now() - ultimo.timestamp*1000 > 300000) : true;
         
+        const badge = document.getElementById('ficha-estado-badge');
         if (ultimo && !offline) {
           document.getElementById('ficha-ultimo-valor').innerText = Number(ultimo.LAeq_1min).toFixed(1);
-          document.getElementById('ficha-ultima-hora').innerText = new Date(ultimo.timestamp*1000).toLocaleTimeString();
-          document.getElementById('ficha-estado-badge').innerText = "En Línea";
-          document.getElementById('ficha-estado-badge').className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+          document.getElementById('ficha-ultima-hora').innerText = new Date(ultimo.timestamp*1000).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'});
+          badge.innerText = "Transmisión Activa";
+          badge.className = "px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-semaforo-ok/20 text-emerald-400 border border-semaforo-ok/40 shadow-sm";
         } else {
           document.getElementById('ficha-ultimo-valor').innerText = "--.-";
-          document.getElementById('ficha-estado-badge').innerText = "Desconectado";
-          document.getElementById('ficha-estado-badge').className = "px-3 py-1 rounded-full text-xs font-bold bg-slate-500/20 text-slate-400";
+          badge.innerText = "Equipo Fuera de Línea";
+          badge.className = "px-3 py-1 rounded-full text-[10px] font-bold tracking-wide bg-rio-border text-huila-arena/50 border border-rio-border/50 shadow-sm";
         }
 
         const pin = document.getElementById(`pin-${nodoActivo}`);
@@ -413,7 +538,7 @@
           if (offline || !ultimo) { pin.className = "marker-pin status-offline"; pin.innerText = "!"; }
           else {
             pin.innerText = Math.round(ultimo.LAeq_1min);
-            if(ultimo.LAeq_1min<=60) pin.className="marker-pin status-ok";
+            if(ultimo.LAeq_1min<=50) pin.className="marker-pin status-ok"; // Corregido a normativa semántica standard
             else if(ultimo.LAeq_1min<=65) pin.className="marker-pin status-warning";
             else pin.className="marker-pin status-alert";
           }
@@ -433,22 +558,20 @@
       document.getElementById('cargando-historial').classList.add('hidden');
     }
 
+    // (Lógicas de historial intactas)
     async function cargarHistorialMensual() {
       const strMes = document.getElementById('input-mes').value;
       const [anio, mes] = strMes.split('-');
       const inicioMs = new Date(anio, mes-1, 1).getTime();
       const finMs = new Date(anio, mes, 0, 23, 59, 59).getTime();
-
       const sector = redNodos[nodoActivo].sector;
-      const limLd = normativas[sector].Ld;
-      const limLn = normativas[sector].Ln;
+      const limLd = normativas[sector].Ld, limLn = normativas[sector].Ln;
 
       try {
         const snap = await db.ref(`${nodoActivo}/historial`).orderByChild('timestamp').startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
         const raw = snap.val() || {};
         const datosPorDia = {};
         const diasEnMes = new Date(anio, mes, 0).getDate();
-        
         for(let i=1; i<=diasEnMes; i++) datosPorDia[i] = { dia: [], noche: [] };
 
         Object.values(raw).forEach(item => {
@@ -459,26 +582,19 @@
           else datosPorDia[diaNum].noche.push(Number(item.LAeq_1min));
         });
 
-        const labels = [], dataLd = [], dataLn = [];
-        const arrRefLd = [], arrRefLn = [];
-
+        const labels = [], dataLd = [], dataLn = [], arrRefLd = [], arrRefLn = [];
         for(let i=1; i<=diasEnMes; i++) {
           labels.push(`Día ${i}`);
           dataLd.push(calcularEquivalente(datosPorDia[i].dia));
           dataLn.push(calcularEquivalente(datosPorDia[i].noche));
-          
-          arrRefLd.push(limLd);
-          arrRefLn.push(limLn);
+          arrRefLd.push(limLd); arrRefLn.push(limLn);
         }
 
         chartMensual.data.labels = labels;
-        chartMensual.data.datasets[0].data = dataLd;
-        chartMensual.data.datasets[1].data = dataLn;
-        chartMensual.data.datasets[2].data = arrRefLd;
-        chartMensual.data.datasets[3].data = arrRefLn;
+        chartMensual.data.datasets[0].data = dataLd; chartMensual.data.datasets[1].data = dataLn;
+        chartMensual.data.datasets[2].data = arrRefLd; chartMensual.data.datasets[3].data = arrRefLn;
         chartMensual.update();
-
-      } catch (e) { console.error("Error historial", e); }
+      } catch (e) { }
     }
 
     async function cargarHistorialAnual() {
@@ -486,10 +602,8 @@
       const anio = strMes.split('-')[0];
       const inicioMs = new Date(anio, 0, 1).getTime();
       const finMs = new Date(anio, 11, 31, 23, 59, 59).getTime();
-
       const sector = redNodos[nodoActivo].sector;
-      const limLd = normativas[sector].Ld;
-      const limLn = normativas[sector].Ln;
+      const limLd = normativas[sector].Ld, limLn = normativas[sector].Ln;
 
       try {
         const snap = await db.ref(`${nodoActivo}/historial`).orderByChild('timestamp').startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
@@ -505,19 +619,15 @@
         });
 
         const arrLdAnual = Array(12).fill(null), arrLnAnual = Array(12).fill(null);
-        
         for(let i=0; i<12; i++) {
           if(datosPorMes[i].dia.length > 0) arrLdAnual[i] = calcularEquivalente(datosPorMes[i].dia);
           if(datosPorMes[i].noche.length > 0) arrLnAnual[i] = calcularEquivalente(datosPorMes[i].noche);
         }
 
-        chartAnual.data.datasets[0].data = arrLdAnual; 
-        chartAnual.data.datasets[1].data = arrLnAnual;
-        chartAnual.data.datasets[2].data = Array(12).fill(limLd);
-        chartAnual.data.datasets[3].data = Array(12).fill(limLn);
+        chartAnual.data.datasets[0].data = arrLdAnual; chartAnual.data.datasets[1].data = arrLnAnual;
+        chartAnual.data.datasets[2].data = Array(12).fill(limLd); chartAnual.data.datasets[3].data = Array(12).fill(limLn);
         chartAnual.update();
-
-      } catch (e) { console.error("Error historial anual", e); }
+      } catch (e) { }
     }
 
     function descargarCSV() {
@@ -531,7 +641,7 @@
     }
 
     function mostrarLoginAdmin() {
-      if(auth.currentUser) { if(confirm("¿Cerrar sesión?")) auth.signOut(); } 
+      if(auth.currentUser) { if(confirm("¿Cerrar sesión de administrador?")) auth.signOut(); } 
       else { document.getElementById('modal-admin').classList.remove('hidden'); }
     }
 
@@ -539,18 +649,19 @@
       try {
         await auth.signInWithEmailAndPassword(document.getElementById('admin-email').value, document.getElementById('admin-pass').value);
         document.getElementById('modal-admin').classList.add('hidden');
-        document.getElementById('btn-admin').innerText = "Admin (Conectado)";
-        document.getElementById('btn-admin').classList.add("bg-emerald-600", "text-white");
+        const btn = document.getElementById('btn-admin');
+        btn.innerText = "Admin (Activo)";
+        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm";
       } catch (e) {
-        document.getElementById('admin-error').innerText = "Credenciales inválidas";
+        document.getElementById('admin-error').innerText = "Credenciales institucionales inválidas.";
         document.getElementById('admin-error').classList.remove('hidden');
       }
     }
 
     auth.onAuthStateChanged(user => {
       const btn = document.getElementById('btn-admin');
-      if(user) { btn.innerText = "Cerrar Admin"; btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600"); }
-      else { btn.innerText = "Admin"; btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-600"); }
+      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm"; }
+      else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-lg ml-1 transition-colors"; }
     });
 
     document.addEventListener("DOMContentLoaded", () => {

@@ -331,21 +331,30 @@
     let datosDiaActual = [];
     let layerBounds = [];
 
-    function initMap() {
-      mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
-      // CartoDB Dark Matter: Súper limpio, resalta el mapa sin invertir imágenes
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(mapa);
-      
-      layerBounds = [];
-      Object.keys(redNodos).forEach(id => {
-        const nodo = redNodos[id];
-        layerBounds.push([nodo.lat, nodo.lng]);
-        const icon = L.divIcon({ className: 'custom-pin', html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:36px; height:36px;">--</div>`, iconSize: [36, 36], iconAnchor: [18, 18] });
-        const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
-        m.on('click', () => seleccionarEstacion(id));
-        marcadores[id] = m;
-      });
-      centrarMapa();
+   function initMap() {
+  mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
+  
+  // Capa base oscura gratuita y sin necesidad de API Key (CARTO Voyager / Dark con Carto CDN libre)
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19,
+    subdomains: 'abcd'
+  }).addTo(mapa);
+  
+  layerBounds = [];
+  Object.keys(redNodos).forEach(id => {
+    const nodo = redNodos[id];
+    layerBounds.push([nodo.lat, nodo.lng]);
+    const icon = L.divIcon({ 
+      className: 'custom-pin', 
+      html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:36px; height:36px;">--</div>`, 
+      iconSize: [36, 36], 
+      iconAnchor: [18, 18] 
+    });
+    const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
+    m.on('click', () => seleccionarEstacion(id));
+    marcadores[id] = m;
+  });
+  centrarMapa();
     }
 
     function centrarMapa() {

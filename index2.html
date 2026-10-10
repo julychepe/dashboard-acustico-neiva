@@ -9,11 +9,17 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
   <style>
+    /* Filtro para convertir el mapa normal de OSM a modo oscuro */
+    .map-tiles-dark {
+      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
+    }
     .marker-pin {
       display: flex; align-items: center; justify-content: center;
       border-radius: 50%; font-weight: bold; font-size: 11px; color: white;
@@ -24,26 +30,29 @@
     .status-alert { background: #ef4444; }
     .status-offline { background: #64748b; border-style: dashed; }
     
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
   </style>
 </head>
-<body class="bg-slate-900 text-slate-200 font-sans h-screen flex flex-col overflow-hidden">
+<body class="bg-slate-900 text-slate-200 font-sans h-screen flex flex-col overflow-hidden relative">
 
   <!-- HEADER -->
-  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex justify-between items-center z-50 shrink-0">
+  <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex justify-between items-center z-40 shrink-0">
     <div>
       <h1 class="text-xl font-bold text-white tracking-wide">Observatorio de Ruido Ambiental</h1>
       <p class="text-xs text-slate-400">Neiva, Huila (América/Bogotá)</p>
     </div>
-    <div class="flex gap-4 items-center">
-      <button onclick="abrirModalDescarga()" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex gap-2">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-        Descargar Datos
+    <div class="flex gap-3 items-center">
+      <button onclick="abrirModalHistorial()" class="text-sm bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-medium transition">
+        📊 Historial Mensual/Anual
       </button>
-      <button onclick="mostrarLoginAdmin()" class="text-xs text-slate-500 hover:text-slate-300">Admin</button>
+      <button onclick="descargarCSV()" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded-lg font-medium transition flex gap-2">
+        📥 Descargar Día
+      </button>
+      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="text-xs text-slate-400 hover:text-white border border-slate-600 px-3 py-1.5 rounded ml-2">
+        Admin
+      </button>
     </div>
   </header>
 
@@ -54,22 +63,20 @@
     <div class="w-full lg:w-7/12 flex flex-col relative border-r border-slate-700">
       <div id="mapa" class="flex-1 w-full bg-slate-950 z-10"></div>
       
-      <!-- LEYENDA FLOTANTE -->
+      <!-- LEYENDA -->
       <div class="absolute bottom-6 left-6 z-20 bg-slate-900/90 backdrop-blur border border-slate-700 p-3 rounded-xl shadow-xl pointer-events-none">
         <h4 class="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider">Estado de Estación</h4>
         <div class="flex flex-col gap-2 text-xs">
           <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#10b981]"></div> ≤ 50 dBA (Día)</div>
           <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#f59e0b]"></div> 50 - 65 dBA</div>
           <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#ef4444]"></div> > 65 dBA</div>
-          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#64748b] border-2 border-dashed border-white"></div> Sin conexión / Sin datos</div>
+          <div class="flex items-center gap-2"><div class="w-3 h-3 rounded-full bg-[#64748b] border-2 border-dashed border-white"></div> Sin conexión</div>
         </div>
       </div>
     </div>
 
     <!-- RIGHT PANEL: ESTACIÓN Y DATOS DEL DÍA -->
     <div class="w-full lg:w-5/12 bg-slate-900 flex flex-col overflow-y-auto">
-      
-      <!-- Ficha de estación -->
       <div class="p-6 border-b border-slate-700 bg-slate-800/50">
         <div class="flex justify-between items-start mb-4">
           <div>
@@ -81,9 +88,10 @@
             Desconocido
           </div>
         </div>
-
         <div class="flex gap-4">
-          <img id="ficha-foto" src="data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=" class="w-24 h-24 object-cover rounded-xl border border-slate-600 bg-slate-700" alt="Foto Sensor">
+          <div class="w-24 h-24 rounded-xl border border-slate-600 bg-slate-700 overflow-hidden flex-shrink-0">
+            <img id="ficha-foto" src="" class="w-full h-full object-cover" alt="Foto Sensor" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
+          </div>
           <div class="flex flex-col justify-center">
             <span class="text-xs text-slate-400 uppercase">Último L<sub>Aeq,1min</sub> Válido</span>
             <div class="flex items-baseline gap-1">
@@ -95,9 +103,8 @@
         </div>
       </div>
 
-      <!-- Control de Fecha -->
       <div class="px-6 py-4 border-b border-slate-700 flex justify-between items-center bg-slate-800">
-        <h3 class="font-bold text-sm text-slate-200">Datos Diarios (Resolución 1 min)</h3>
+        <h3 class="font-bold text-sm text-slate-200">Datos Diarios (1 min)</h3>
         <div class="flex items-center gap-2">
           <button onclick="cambiarDia(-1)" class="p-1.5 bg-slate-700 hover:bg-slate-600 rounded text-slate-300">◀</button>
           <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-slate-900 border border-slate-600 text-sm text-slate-200 rounded px-2 py-1 outline-none focus:border-indigo-500">
@@ -105,19 +112,13 @@
         </div>
       </div>
 
-      <!-- Gráfico Serie Temporal -->
       <div class="p-6 border-b border-slate-700">
-        <div class="h-56 w-full relative">
-          <canvas id="chart-diario"></canvas>
-        </div>
+        <div class="h-56 w-full relative"><canvas id="chart-diario"></canvas></div>
       </div>
 
-      <!-- Indicadores Acústicos -->
       <div class="p-6">
         <h3 class="font-bold text-sm text-slate-200 mb-4">Indicadores Diurnos y Nocturnos</h3>
-        
         <div class="grid grid-cols-2 gap-4">
-          <!-- Tarjeta Día -->
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <div class="flex justify-between items-center mb-2">
               <span class="text-xs font-bold text-sky-400 uppercase">Ld (07:01 - 21:00)</span>
@@ -126,7 +127,6 @@
             <div class="text-2xl font-black text-white" id="val-ld">--.- <span class="text-sm font-normal text-slate-500">dBA</span></div>
             <p class="text-[10px] text-slate-400 mt-2" id="msg-dia"></p>
           </div>
-          <!-- Tarjeta Noche -->
           <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
             <div class="flex justify-between items-center mb-2">
               <span class="text-xs font-bold text-indigo-400 uppercase">Ln (21:01 - 07:00)</span>
@@ -136,331 +136,396 @@
             <p class="text-[10px] text-slate-400 mt-2" id="msg-noche"></p>
           </div>
         </div>
-        <p class="text-xs text-slate-500 mt-4 leading-relaxed">
-          * Los indicadores representan el nivel continuo equivalente de los intervalos válidos ponderado A. <br>
-          * Un valor normativo referencial (Res. 0627/2006) requiere una cobertura temporal suficiente. Valores con cobertura menor al 75% se marcan como "Datos Insuficientes".
-        </p>
       </div>
     </div>
   </main>
 
+  <!-- MODAL: LOGIN ADMIN -->
+  <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-slate-950/80 backdrop-blur-sm flex items-center justify-center">
+    <div class="bg-slate-800 border border-slate-700 p-6 rounded-2xl w-full max-w-sm shadow-2xl relative">
+      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="absolute top-4 right-4 text-slate-400 hover:text-white">✕</button>
+      <h3 class="text-xl font-bold text-white mb-4">Acceso Administrativo</h3>
+      <input type="email" id="admin-email" placeholder="Correo" class="w-full mb-3 bg-slate-900 border border-slate-700 rounded p-2 text-white">
+      <input type="password" id="admin-pass" placeholder="Contraseña" class="w-full mb-4 bg-slate-900 border border-slate-700 rounded p-2 text-white">
+      <button onclick="iniciarSesionAdmin()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 rounded">Ingresar</button>
+      <p id="admin-error" class="text-red-400 text-xs mt-3 hidden"></p>
+    </div>
+  </div>
+
+  <!-- MODAL: HISTORIAL INDEPENDIENTE (MES/AÑO) -->
+  <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 p-6 rounded-2xl w-full max-w-5xl h-[85vh] shadow-2xl flex flex-col relative">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-2xl font-bold text-white">Historial Acústico: <span id="historial-nodo-nombre" class="text-indigo-400"></span></h2>
+        <button onclick="document.getElementById('modal-historial').classList.add('hidden')" class="text-slate-400 hover:text-white bg-slate-800 px-3 py-1 rounded">Cerrar</button>
+      </div>
+      
+      <!-- Controles del Historial -->
+      <div class="flex gap-4 mb-6 bg-slate-800 p-4 rounded-xl border border-slate-700">
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-slate-400">Mes:</label>
+          <input type="month" id="input-mes" class="bg-slate-900 border border-slate-600 text-sm text-white rounded p-1">
+        </div>
+        <button onclick="cargarHistorialMensual()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded text-sm text-white font-medium">Consultar Mes</button>
+        <span id="cargando-historial" class="text-xs text-emerald-400 hidden animate-pulse pt-2">Descargando registros...</span>
+      </div>
+
+      <!-- Gráficas del Historial -->
+      <div class="flex-1 overflow-y-auto grid grid-rows-2 gap-6 pb-4">
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <h3 class="text-sm font-bold text-slate-200 mb-2">Evolución Ld y Ln (Mes)</h3>
+          <div class="h-48 relative"><canvas id="chart-mensual"></canvas></div>
+        </div>
+        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+          <h3 class="text-sm font-bold text-slate-200 mb-2">Promedios Anuales (Muestra de ejemplo)</h3>
+          <p class="text-xs text-slate-400 mb-2">Requiere procesar la base de datos completa. Mostrando promedios del mes actual seleccionado.</p>
+          <div class="h-48 relative"><canvas id="chart-anual"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    /* =========================================================
-       MÓDULO 1: CONFIGURACIÓN Y METADATOS
-       ========================================================= */
+    /* ==========================================
+       CONFIGURACIÓN FIREBASE Y VARIABLES
+       ========================================== */
     const firebaseConfig = {
       apiKey: "AIzaSyCmfD-H6B5bXMEZN-3KcPCmZk8d-6p4ddE",
       databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
       projectId: "acustica-neiva"
     };
-    firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+    const auth = firebase.auth();
 
     const redNodos = {
-      nodo1: {
-        id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Residencial",
-        lat: 2.865666, lng: -75.216591,
-        foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg",
-        descripcion: "Vereda Agua-blanca, Neiva"
-      },
-      nodo2: {
-        id: "nodo2", nombre: "Parque Santander", sector: "Comercial",
-        lat: 2.927300, lng: -75.281800,
-        foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=400",
-        descripcion: "Zona Centro Comercial"
-      }
+      nodo1: { id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Residencial", lat: 2.865666, lng: -75.216591, foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg", descripcion: "Vereda Agua-blanca, Neiva" },
+      nodo2: { id: "nodo2", nombre: "Parque Santander", sector: "Comercial", lat: 2.927300, lng: -75.281800, foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=400", descripcion: "Zona Centro Comercial" }
     };
 
-    /* VARIABLES DE ESTADO GLOABLES */
-    let mapa, marcadores = {};
-    let chartDiario;
+    let mapa, marcadores = {}, chartDiario, chartMensual, chartAnual;
     let nodoActivo = "nodo1";
     let intervaloTiempoReal = null;
-    let datosDiaActual = []; // Almacenará solo los LAeq del día seleccionado
+    let datosDiaActual = [];
 
-    /* =========================================================
-       MÓDULO 2: ACÚSTICA Y PROCESAMIENTO
-       ========================================================= */
-    
-    // Cálculo energético (10 * log10 ( (1/N) * sum(10^(Li/10)) ))
-    function calcularEquivalente(valores) {
-      if (!valores || valores.length === 0) return null;
-      let sumaEnergetica = 0;
-      valores.forEach(v => sumaEnergetica += Math.pow(10, v / 10));
-      return 10 * Math.log10(sumaEnergetica / valores.length);
+    /* ==========================================
+       INICIALIZACIÓN DE MAPA (CORREGIDO OSM)
+       ========================================== */
+    function initMap() {
+      mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
+      
+      // SOLUCIÓN MAPA: Usamos OpenStreetMap gratuito y le aplicamos un filtro CSS oscuro (clase map-tiles-dark)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        className: 'map-tiles-dark',
+        maxZoom: 19
+      }).addTo(mapa);
+      
+      const bounds = [];
+      Object.keys(redNodos).forEach(id => {
+        const nodo = redNodos[id];
+        bounds.push([nodo.lat, nodo.lng]);
+        const icon = L.divIcon({
+          className: 'custom-pin',
+          html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:34px; height:34px;">--</div>`,
+          iconSize: [34, 34], iconAnchor: [17, 17]
+        });
+        const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
+        m.on('click', () => seleccionarEstacion(id));
+        marcadores[id] = m;
+      });
+      mapa.fitBounds(bounds, { padding: [50, 50] });
     }
 
-    // Clasifica datos por periodo (Día: 07:01-21:00, Noche: 21:01-07:00)
-    function calcularIndicadoresDiarios(datos) {
-      const minEsperadosDia = 840; // 14 horas
-      const minEsperadosNoche = 600; // 10 horas
-      
-      let valoresDia = [], valoresNoche = [];
-
-      datos.forEach(d => {
-        if(d.LAeq === null) return;
-        const hora = d.fechaObj.getHours();
-        const min = d.fechaObj.getMinutes();
-        const minutosTotales = hora * 60 + min;
-        
-        // Día normativo: 07:01 a 21:00 (421 a 1260 minutos)
-        if (minutosTotales >= 421 && minutosTotales <= 1260) {
-          valoresDia.push(d.LAeq);
-        } else {
-          valoresNoche.push(d.LAeq);
-        }
+    /* ==========================================
+       GRÁFICAS (CHART.JS)
+       ========================================== */
+    function initCharts() {
+      // Diario
+      const ctxD = document.getElementById('chart-diario').getContext('2d');
+      chartDiario = new Chart(ctxD, {
+        type: 'line',
+        data: { labels: [], datasets: [{ label: 'LAeq [dBA]', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, borderWidth: 1.5, pointRadius: 0, spanGaps: false }] },
+        options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { display: false } } }
       });
 
-      const covDia = (valoresDia.length / minEsperadosDia) * 100;
-      const covNoche = (valoresNoche.length / minEsperadosNoche) * 100;
+      // Mensual
+      const ctxM = document.getElementById('chart-mensual').getContext('2d');
+      chartMensual = new Chart(ctxM, {
+        type: 'bar',
+        data: { labels: [], datasets: [
+          { label: 'Ld (Día)', data: [], backgroundColor: '#38bdf8' },
+          { label: 'Ln (Noche)', data: [], backgroundColor: '#818cf8' }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {display:false}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
+      });
 
-      return {
-        Ld: calcularEquivalente(valoresDia),
-        Ln: calcularEquivalente(valoresNoche),
-        covDia: Math.min(covDia, 100),
-        covNoche: Math.min(covNoche, 100)
-      };
+      // Anual
+      const ctxA = document.getElementById('chart-anual').getContext('2d');
+      chartAnual = new Chart(ctxA, {
+        type: 'line',
+        data: { labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets: [
+          { label: 'Ld Promedio', data: Array(12).fill(null), borderColor: '#38bdf8' },
+          { label: 'Ln Promedio', data: Array(12).fill(null), borderColor: '#818cf8' }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
+      });
     }
 
-    /* =========================================================
-       MÓDULO 3: API Y CONSULTAS (OPTIMIZADO)
-       ========================================================= */
-    
-    // Configura la fecha local inicial (Bogotá)
+    /* ==========================================
+       LÓGICA DE DATOS Y ACÚSTICA
+       ========================================== */
     function inicializarFechas() {
       const hoy = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Bogota'});
       document.getElementById('input-fecha').value = hoy;
-      document.getElementById('input-fecha').max = hoy;
+      document.getElementById('input-mes').value = hoy.substring(0, 7);
     }
 
     function cambiarDia(offset) {
       const input = document.getElementById('input-fecha');
-      const d = new Date(input.value + "T12:00:00-05:00"); // Forzar Bogota (-05:00)
+      const d = new Date(input.value + "T12:00:00-05:00");
       d.setDate(d.getDate() + offset);
       const nuevoDia = d.toLocaleDateString('en-CA', {timeZone: 'America/Bogota'});
-      
       if(nuevoDia <= new Date().toLocaleDateString('en-CA', {timeZone: 'America/Bogota'})) {
         input.value = nuevoDia;
         cargarDatosDiaSeleccionado();
       }
     }
 
-    // Consulta SOLAMENTE el rango de 24h para no colapsar la app
-    async function cargarDatosDiaSeleccionado() {
-      const strFecha = document.getElementById('input-fecha').value;
-      const inicioMs = new Date(`${strFecha}T00:00:00-05:00`).getTime();
-      const finMs = new Date(`${strFecha}T23:59:59-05:00`).getTime();
-
-      // Firebase Query con indexación requerida en backend
-      const ref = db.ref(`${nodoActivo}/historial`);
-      
-      try {
-        const snapshot = await ref.orderByChild('timestamp')
-                                  .startAt(Math.floor(inicioMs/1000))
-                                  .endAt(Math.floor(finMs/1000))
-                                  .once('value');
-        
-        datosDiaActual = [];
-        const rawData = snapshot.val();
-        
-        if (rawData) {
-          Object.values(rawData).forEach(item => {
-            datosDiaActual.push({
-              timestamp: item.timestamp,
-              fechaObj: new Date(item.timestamp * 1000),
-              LAeq: item.LAeq_1min ? Number(item.LAeq_1min) : null
-            });
-          });
-          datosDiaActual.sort((a,b) => a.timestamp - b.timestamp);
-        }
-        
-        actualizarUI();
-      } catch(e) {
-        console.error("Error consultando historial. ¿Está indexado 'timestamp' en Firebase?", e);
-      }
-    }
-
-    // Consulta ligera solo para saber si la estación está en línea (último registro)
-    async function monitorearTiempoReal() {
-      try {
-        const snapshot = await db.ref(`${nodoActivo}/historial`)
-                                 .orderByChild('timestamp')
-                                 .limitToLast(1)
-                                 .once('value');
-        const data = snapshot.val();
-        if(data) {
-          const ultimo = Object.values(data)[0];
-          const msAntiguedad = Date.now() - (ultimo.timestamp * 1000);
-          const offline = msAntiguedad > 300000; // 5 minutos = offline
-          
-          actualizarFichaTiempoReal(ultimo, offline);
-          actualizarMarcador(nodoActivo, ultimo.LAeq_1min, offline);
-        } else {
-          actualizarFichaTiempoReal(null, true);
-        }
-      } catch(e) {}
-    }
-
-    /* =========================================================
-       MÓDULO 4: INTERFAZ Y VISUALIZACIÓN
-       ========================================================= */
-
-    function initMap() {
-      mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 20
-}).addTo(mapa);
-      
-      const bounds = [];
-      Object.keys(redNodos).forEach(id => {
-        const nodo = redNodos[id];
-        bounds.push([nodo.lat, nodo.lng]);
-        
-        const icon = L.divIcon({
-          className: 'custom-pin',
-          html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:34px; height:34px;">--</div>`,
-          iconSize: [34, 34], iconAnchor: [17, 17]
-        });
-        
-        const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
-        m.on('click', () => seleccionarEstacion(id));
-        marcadores[id] = m;
-      });
-      
-      mapa.fitBounds(bounds, { padding: [50, 50] });
-    }
-
-    function initChart() {
-      const ctx = document.getElementById('chart-diario').getContext('2d');
-      chartDiario = new Chart(ctx, {
-        type: 'line',
-        data: { labels: [], datasets: [{ label: 'LAeq,1min [dBA]', data: [], borderColor: '#6366f1', backgroundColor: 'rgba(99, 102, 241, 0.1)', fill: true, borderWidth: 1.5, pointRadius: 0, spanGaps: false }] },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { type: 'category', grid: {color: '#334155'}, ticks: {color: '#94a3b8', maxTicksLimit: 12} },
-            y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'}, min: 35, max: 85 }
-          },
-          plugins: { legend: { display: false } }
-        }
-      });
+    function calcularEquivalente(valores) {
+      if (!valores || valores.length === 0) return null;
+      let suma = 0;
+      valores.forEach(v => suma += Math.pow(10, v / 10));
+      return 10 * Math.log10(suma / valores.length);
     }
 
     function seleccionarEstacion(id) {
       nodoActivo = id;
       const nodo = redNodos[id];
-      
-      // Actualizar Metadatos Ficha
       document.getElementById('ficha-codigo').innerText = `CÓDIGO: ${nodo.id} | ${nodo.sector}`;
       document.getElementById('ficha-nombre').innerText = nodo.nombre;
       document.getElementById('ficha-desc').innerText = nodo.descripcion;
       document.getElementById('ficha-foto').src = nodo.foto;
       
-      // Detener anterior y lanzar nuevo polling
       if(intervaloTiempoReal) clearInterval(intervaloTiempoReal);
       monitorearTiempoReal();
-      intervaloTiempoReal = setInterval(monitorearTiempoReal, 15000); // Polling cada 15s, solo de 1 dato (eficiente)
-      
+      intervaloTiempoReal = setInterval(monitorearTiempoReal, 15000);
       cargarDatosDiaSeleccionado();
     }
 
-    function actualizarUI() {
-      // 1. Actualizar Gráfico (rellenando huecos con null para no unir líneas falsamente)
-      const labels = [];
-      const datosY = [];
-      
-      // Generar 1440 minutos para el eje X
-      let idxDatos = 0;
+    async function cargarDatosDiaSeleccionado() {
       const strFecha = document.getElementById('input-fecha').value;
+      const inicioMs = new Date(`${strFecha}T00:00:00-05:00`).getTime();
+      const finMs = new Date(`${strFecha}T23:59:59-05:00`).getTime();
+      
+      try {
+        const snapshot = await db.ref(`${nodoActivo}/historial`)
+          .orderByChild('timestamp')
+          .startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
+        
+        datosDiaActual = [];
+        if (snapshot.val()) {
+          Object.values(snapshot.val()).forEach(item => {
+            datosDiaActual.push({ timestamp: item.timestamp, fechaObj: new Date(item.timestamp * 1000), LAeq: Number(item.LAeq_1min) });
+          });
+          datosDiaActual.sort((a,b) => a.timestamp - b.timestamp);
+        }
+        actualizarUIDiaria(strFecha);
+      } catch(e) { console.error("Error cargando día", e); }
+    }
+
+    function actualizarUIDiaria(strFecha) {
+      // 1. Gráfica Diario
+      const labels = [], datosY = [];
+      let idx = 0;
       const tBase = new Date(`${strFecha}T00:00:00-05:00`).getTime();
       
-      for(let i=0; i<1440; i++) {
-        const tMinuto = tBase + (i * 60000);
-        const dObj = new Date(tMinuto);
-        labels.push(dObj.toLocaleTimeString('es-CO', {hour: '2-digit', minute:'2-digit', timeZone: 'America/Bogota'}));
+      for(let i=0; i<1440; i+=5) { // Agrupado cada 5 mins para mejor rendimiento visual
+        const tMin = tBase + (i * 60000);
+        labels.push(new Date(tMin).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}));
         
-        if (datosDiaActual[idxDatos] && Math.abs(datosDiaActual[idxDatos].timestamp*1000 - tMinuto) < 59000) {
-          datosY.push(datosDiaActual[idxDatos].LAeq);
-          idxDatos++;
-        } else {
-          datosY.push(null); // Evita interpelación falsa
+        let found = null;
+        while(idx < datosDiaActual.length && datosDiaActual[idx].timestamp*1000 < tMin + 300000) {
+          found = datosDiaActual[idx].LAeq;
+          idx++;
         }
+        datosY.push(found);
       }
-      
       chartDiario.data.labels = labels;
       chartDiario.data.datasets[0].data = datosY;
       chartDiario.update();
 
-      // 2. Actualizar Indicadores Ld / Ln
-      const inds = calcularIndicadoresDiarios(datosDiaActual);
-      
-      const uiLd = document.getElementById('val-ld');
-      const msgDia = document.getElementById('msg-dia');
-      const covDia = document.getElementById('cov-dia');
-      if (inds.Ld !== null) {
-        uiLd.innerHTML = `${inds.Ld.toFixed(1)} <span class="text-sm font-normal text-slate-500">dBA</span>`;
-        covDia.innerText = `Cov: ${inds.covDia.toFixed(1)}%`;
-        msgDia.innerText = inds.covDia < 75 ? "⚠️ Datos insuficientes para representatividad" : "Calidad de cobertura óptima";
-        msgDia.className = inds.covDia < 75 ? "text-[10px] text-amber-500 mt-2" : "text-[10px] text-emerald-500 mt-2";
-      } else {
-        uiLd.innerText = "--.-"; covDia.innerText = "Cov: 0%"; msgDia.innerText = "Sin datos";
-      }
+      // 2. Indicadores
+      let valDia = [], valNoche = [];
+      datosDiaActual.forEach(d => {
+        const minTot = d.fechaObj.getHours()*60 + d.fechaObj.getMinutes();
+        if(minTot >= 421 && minTot <= 1260) valDia.push(d.LAeq); else valNoche.push(d.LAeq);
+      });
 
-      const uiLn = document.getElementById('val-ln');
-      const msgNoche = document.getElementById('msg-noche');
-      const covNoche = document.getElementById('cov-noche');
-      if (inds.Ln !== null) {
-        uiLn.innerHTML = `${inds.Ln.toFixed(1)} <span class="text-sm font-normal text-slate-500">dBA</span>`;
-        covNoche.innerText = `Cov: ${inds.covNoche.toFixed(1)}%`;
-        msgNoche.innerText = inds.covNoche < 75 ? "⚠️ Datos insuficientes para representatividad" : "Calidad de cobertura óptima";
-        msgNoche.className = inds.covNoche < 75 ? "text-[10px] text-amber-500 mt-2" : "text-[10px] text-emerald-500 mt-2";
+      const ld = calcularEquivalente(valDia);
+      const ln = calcularEquivalente(valNoche);
+      const covDia = Math.min((valDia.length/840)*100, 100);
+      const covNoche = Math.min((valNoche.length/600)*100, 100);
+
+      document.getElementById('val-ld').innerHTML = ld ? `${ld.toFixed(1)} <span class="text-sm">dBA</span>` : '--.-';
+      document.getElementById('cov-dia').innerText = `Cov: ${covDia.toFixed(0)}%`;
+      document.getElementById('val-ln').innerHTML = ln ? `${ln.toFixed(1)} <span class="text-sm">dBA</span>` : '--.-';
+      document.getElementById('cov-noche').innerText = `Cov: ${covNoche.toFixed(0)}%`;
+    }
+
+    async function monitorearTiempoReal() {
+      try {
+        const snapshot = await db.ref(`${nodoActivo}/historial`).orderByChild('timestamp').limitToLast(1).once('value');
+        const data = snapshot.val();
+        const ultimo = data ? Object.values(data)[0] : null;
+        const offline = ultimo ? (Date.now() - ultimo.timestamp*1000 > 300000) : true;
+        
+        if (ultimo && !offline) {
+          document.getElementById('ficha-ultimo-valor').innerText = Number(ultimo.LAeq_1min).toFixed(1);
+          document.getElementById('ficha-ultima-hora').innerText = new Date(ultimo.timestamp*1000).toLocaleTimeString();
+          document.getElementById('ficha-estado-badge').innerText = "En Línea";
+          document.getElementById('ficha-estado-badge').className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+        } else {
+          document.getElementById('ficha-ultimo-valor').innerText = "--.-";
+          document.getElementById('ficha-estado-badge').innerText = "Desconectado";
+          document.getElementById('ficha-estado-badge').className = "px-3 py-1 rounded-full text-xs font-bold bg-slate-500/20 text-slate-400";
+        }
+
+        const pin = document.getElementById(`pin-${nodoActivo}`);
+        if(pin) {
+          if (offline || !ultimo) { pin.className = "marker-pin status-offline"; pin.innerText = "!"; }
+          else {
+            pin.innerText = Math.round(ultimo.LAeq_1min);
+            if(ultimo.LAeq_1min<=60) pin.className="marker-pin status-ok";
+            else if(ultimo.LAeq_1min<=65) pin.className="marker-pin status-warning";
+            else pin.className="marker-pin status-alert";
+          }
+        }
+      } catch(e) {}
+    }
+
+    /* ==========================================
+       MODALES: HISTORIAL, DESCARGA Y ADMIN
+       ========================================== */
+    function abrirModalHistorial() {
+      document.getElementById('historial-nodo-nombre').innerText = redNodos[nodoActivo].nombre;
+      document.getElementById('modal-historial').classList.remove('hidden');
+      cargarHistorialMensual(); // Carga por defecto el mes actual
+    }
+
+    async function cargarHistorialMensual() {
+      const strMes = document.getElementById('input-mes').value; // ej: 2026-10
+      const [anio, mes] = strMes.split('-');
+      const inicioMs = new Date(anio, mes-1, 1).getTime();
+      const finMs = new Date(anio, mes, 0, 23, 59, 59).getTime();
+
+      document.getElementById('cargando-historial').classList.remove('hidden');
+
+      try {
+        const snap = await db.ref(`${nodoActivo}/historial`)
+          .orderByChild('timestamp').startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
+        
+        const raw = snap.val() || {};
+        const datosPorDia = {};
+        const diasEnMes = new Date(anio, mes, 0).getDate();
+        
+        // Inicializar días
+        for(let i=1; i<=diasEnMes; i++) datosPorDia[i] = { dia: [], noche: [] };
+
+        Object.values(raw).forEach(item => {
+          const d = new Date(item.timestamp*1000);
+          const diaNum = d.getDate();
+          const minTot = d.getHours()*60 + d.getMinutes();
+          if(minTot >= 421 && minTot <= 1260) datosPorDia[diaNum].dia.push(Number(item.LAeq_1min));
+          else datosPorDia[diaNum].noche.push(Number(item.LAeq_1min));
+        });
+
+        const labels = [], dataLd = [], dataLn = [];
+        for(let i=1; i<=diasEnMes; i++) {
+          labels.push(`Día ${i}`);
+          dataLd.push(calcularEquivalente(datosPorDia[i].dia));
+          dataLn.push(calcularEquivalente(datosPorDia[i].noche));
+        }
+
+        chartMensual.data.labels = labels;
+        chartMensual.data.datasets[0].data = dataLd;
+        chartMensual.data.datasets[1].data = dataLn;
+        chartMensual.update();
+
+        // Para el Anual, como ejemplo colocamos el promedio del mes consultado en la barra correspondiente
+        const promLdMes = calcularEquivalente(dataLd.filter(x=>x));
+        const promLnMes = calcularEquivalente(dataLn.filter(x=>x));
+        
+        const arrLdAnual = Array(12).fill(null);
+        const arrLnAnual = Array(12).fill(null);
+        arrLdAnual[mes-1] = promLdMes;
+        arrLnAnual[mes-1] = promLnMes;
+
+        chartAnual.data.datasets[0].data = arrLdAnual;
+        chartAnual.data.datasets[1].data = arrLnAnual;
+        chartAnual.update();
+
+      } catch (e) {
+        console.error("Error historial", e);
+      }
+      document.getElementById('cargando-historial').classList.add('hidden');
+    }
+
+    function descargarCSV() {
+      if(datosDiaActual.length === 0) return alert("No hay datos cargados para este día.");
+      let csv = "Timestamp,Fecha_Hora,LAeq_1min\n";
+      datosDiaActual.forEach(d => {
+        csv += `${d.timestamp},${d.fechaObj.toLocaleString()},${d.LAeq}\n`;
+      });
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Ruido_${nodoActivo}_${document.getElementById('input-fecha').value}.csv`;
+      a.click();
+    }
+
+    function mostrarLoginAdmin() {
+      if(auth.currentUser) {
+        if(confirm("Sesión de administrador activa. ¿Deseas cerrar sesión?")) auth.signOut();
       } else {
-        uiLn.innerText = "--.-"; covNoche.innerText = "Cov: 0%"; msgNoche.innerText = "Sin datos";
+        document.getElementById('modal-admin').classList.remove('hidden');
       }
     }
 
-    function actualizarFichaTiempoReal(ultimo, offline) {
-      const badge = document.getElementById('ficha-estado-badge');
-      const vEl = document.getElementById('ficha-ultimo-valor');
-      const tEl = document.getElementById('ficha-ultima-hora');
-
-      if (ultimo && !offline) {
-        vEl.innerText = Number(ultimo.LAeq_1min).toFixed(1);
-        tEl.innerText = new Date(ultimo.timestamp * 1000).toLocaleTimeString('es-CO', {timeZone: 'America/Bogota'});
-        badge.innerText = "En Línea";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
-      } else {
-        vEl.innerText = "--.-";
-        tEl.innerText = ultimo ? `Última vez: ${new Date(ultimo.timestamp * 1000).toLocaleString('es-CO')}` : "Sin información";
-        badge.innerText = offline ? "Desconectada" : "Sin Datos";
-        badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-slate-500/20 text-slate-400 border border-slate-500/40";
+    async function iniciarSesionAdmin() {
+      const em = document.getElementById('admin-email').value;
+      const pw = document.getElementById('admin-pass').value;
+      const errEl = document.getElementById('admin-error');
+      try {
+        await auth.signInWithEmailAndPassword(em, pw);
+        document.getElementById('modal-admin').classList.add('hidden');
+        document.getElementById('btn-admin').innerText = "Admin (Conectado)";
+        document.getElementById('btn-admin').classList.add("bg-emerald-600", "text-white");
+        alert("Autenticado como administrador.");
+      } catch (e) {
+        errEl.innerText = "Credenciales inválidas";
+        errEl.classList.remove('hidden');
       }
     }
 
-    function actualizarMarcador(id, val, offline) {
-      const pin = document.getElementById(`pin-${id}`);
-      if(!pin) return;
-      if (offline || val === null) {
-        pin.className = "marker-pin status-offline";
-        pin.innerText = "!";
+    auth.onAuthStateChanged(user => {
+      const btn = document.getElementById('btn-admin');
+      if(user) {
+        btn.innerText = "Cerrar Admin";
+        btn.classList.add("bg-indigo-600", "text-white", "border-indigo-600");
       } else {
-        pin.innerText = Math.round(val);
-        if (val <= 60) pin.className = "marker-pin status-ok";
-        else if (val <= 65) pin.className = "marker-pin status-warning";
-        else pin.className = "marker-pin status-alert";
+        btn.innerText = "Admin";
+        btn.classList.remove("bg-indigo-600", "text-white", "border-indigo-600");
       }
-    }
+    });
 
     // Arranque
     document.addEventListener("DOMContentLoaded", () => {
       inicializarFechas();
       initMap();
-      initChart();
+      initCharts();
       seleccionarEstacion('nodo1');
     });
-
   </script>
 </body>
 </html>

@@ -48,6 +48,11 @@
   </script>
 
   <style>
+    /* TRUCO CSS: Convierte el mapa estándar de OpenStreetMap en modo oscuro profundo */
+    .map-tiles-dark {
+      filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(85%);
+    }
+
     /* Reset Leaflet para oscurecer controles */
     .leaflet-bar a { background-color: #0e2333 !important; color: #eaddcf !important; border-color: #1a3a52 !important; }
     .leaflet-bar a:hover { background-color: #1a3a52 !important; }
@@ -113,10 +118,9 @@
     
     <!-- PANEL IZQUIERDO: MAPA -->
     <div class="w-full lg:w-7/12 flex flex-col relative border-r border-rio-border shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
-      <!-- Mapa usando CartoDB Dark Matter (Súper limpio, resalta colores) -->
       <div id="mapa" class="flex-1 w-full bg-[#0a0a0a] z-10"></div>
       
-      <!-- LEYENDA INTEGRADA AL ESTILO EDITORIAL -->
+      <!-- LEYENDA INTEGRADA -->
       <div class="absolute bottom-6 left-6 z-20 bg-rio-surface/90 backdrop-blur-md border border-rio-border p-4 rounded-xl shadow-2xl pointer-events-none">
         <h4 class="text-[10px] font-bold text-huila-arena/70 mb-3 uppercase tracking-widest font-display">Clasificación Acústica</h4>
         <div class="flex flex-col gap-2.5 text-xs text-white/90">
@@ -127,7 +131,6 @@
         </div>
       </div>
       
-      <!-- Botón de centrado -->
       <button onclick="centrarMapa()" class="absolute top-4 right-4 z-20 bg-rio-surface/90 backdrop-blur border border-rio-border p-2.5 rounded-lg shadow-lg text-huila-arena hover:text-white transition-colors" title="Ver toda la ciudad">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
       </button>
@@ -138,7 +141,6 @@
       
       <!-- FICHA DE ESTACIÓN EDITORIAL -->
       <div class="relative bg-rio-surface border-b border-rio-border">
-        <!-- Foto de fondo con gradiente profundo -->
         <div class="absolute inset-0 z-0">
           <img id="ficha-foto" src="" class="w-full h-full object-cover opacity-30" alt="Vista de la Estación" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
           <div class="absolute inset-0 bg-gradient-to-t from-rio-surface via-rio-surface/90 to-transparent"></div>
@@ -271,12 +273,14 @@
         <span id="cargando-historial" class="text-xs text-huila-ocre hidden font-medium flex items-center gap-2"><svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Calculando indicadores...</span>
       </div>
 
+      <!-- SECCIÓN DE GRÁFICAS CON ALTURA ADECUADA PARA EVITAR SUPERPOSICIONES -->
       <div class="flex-1 overflow-y-auto flex flex-col gap-8 pb-4 pr-2">
         <div class="bg-rio-dark p-6 rounded-xl border border-rio-border shadow-lg">
           <div class="mb-4">
             <h3 class="text-base font-display font-bold text-white">Evolución Diaria (Mes Seleccionado)</h3>
             <p class="text-xs text-huila-arena/60">Comparativa Ld/Ln contra límites normativos establecidos para el sector.</p>
           </div>
+          <!-- Espacio amplio garantizado -->
           <div class="h-80 relative w-full"><canvas id="chart-mensual"></canvas></div>
         </div>
         
@@ -285,6 +289,7 @@
             <h3 class="text-base font-display font-bold text-white">Consolidado Anual</h3>
             <p class="text-xs text-huila-arena/60">Promedios mensuales del comportamiento acústico a lo largo del año.</p>
           </div>
+          <!-- Espacio amplio garantizado -->
           <div class="h-80 relative w-full"><canvas id="chart-anual"></canvas></div>
         </div>
       </div>
@@ -292,7 +297,9 @@
   </div>
 
   <script>
-    // Tu configuración existente
+    // ----------------------------------------------------
+    // 1. CONFIGURACIÓN FIREBASE Y DATOS MAESTROS
+    // ----------------------------------------------------
     const firebaseConfig = {
       apiKey: "AIzaSyCmfD-H6B5bXMEZN-3KcPCmZk8d-6p4ddE",
       databaseURL: "https://acustica-neiva-default-rtdb.firebaseio.com",
@@ -313,7 +320,9 @@
       "Suburbano": { Ld: 55, Ln: 45 } 
     };
 
-    // Paleta para Chart.js
+    // ----------------------------------------------------
+    // 2. PALETA VISUAL PARA GRÁFICOS (CHART.JS)
+    // ----------------------------------------------------
     const colorGraphLine = '#d97736'; // Huila Ocre
     const colorGraphFill = 'rgba(217, 119, 54, 0.1)';
     const colorGrid = 'rgba(234, 221, 207, 0.05)';
@@ -322,8 +331,8 @@
     // Colores de barras
     const colorBarLd = '#3b82f6'; // Azul vibrante
     const colorBarLn = '#6366f1'; // Indigo profundo
-    const colorRefLd = '#ef4444'; 
-    const colorRefLn = '#f59e0b'; 
+    const colorRefLd = '#ef4444'; // Rojo advertencia
+    const colorRefLn = '#f59e0b'; // Naranja advertencia
 
     let mapa, marcadores = {}, chartDiario, chartMensual, chartAnual;
     let nodoActivo = "nodo1";
@@ -331,42 +340,47 @@
     let datosDiaActual = [];
     let layerBounds = [];
 
-   function initMap() {
-  mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
-  
-  // Capa base oscura gratuita y sin necesidad de API Key (CARTO Voyager / Dark con Carto CDN libre)
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 19,
-    subdomains: 'abcd'
-  }).addTo(mapa);
-  
-  layerBounds = [];
-  Object.keys(redNodos).forEach(id => {
-    const nodo = redNodos[id];
-    layerBounds.push([nodo.lat, nodo.lng]);
-    const icon = L.divIcon({ 
-      className: 'custom-pin', 
-      html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:36px; height:36px;">--</div>`, 
-      iconSize: [36, 36], 
-      iconAnchor: [18, 18] 
-    });
-    const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
-    m.on('click', () => seleccionarEstacion(id));
-    marcadores[id] = m;
-  });
-  centrarMapa();
+    // ----------------------------------------------------
+    // 3. INICIALIZACIÓN DE MAPA (OpenStreetMap 100% Libre)
+    // ----------------------------------------------------
+    function initMap() {
+      mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
+      
+      // OpenStreetMap estándar usando clase CSS para hacerlo oscuro
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+        maxZoom: 19,
+        className: 'map-tiles-dark' 
+      }).addTo(mapa);
+      
+      layerBounds = [];
+      Object.keys(redNodos).forEach(id => {
+        const nodo = redNodos[id];
+        layerBounds.push([nodo.lat, nodo.lng]);
+        const icon = L.divIcon({ 
+          className: 'custom-pin', 
+          html: `<div id="pin-${id}" class="marker-pin status-offline" style="width:36px; height:36px;">--</div>`, 
+          iconSize: [36, 36], 
+          iconAnchor: [18, 18] 
+        });
+        const m = L.marker([nodo.lat, nodo.lng], { icon }).addTo(mapa);
+        m.on('click', () => seleccionarEstacion(id));
+        marcadores[id] = m;
+      });
+      centrarMapa();
     }
 
     function centrarMapa() {
         if(layerBounds.length > 0) mapa.fitBounds(layerBounds, { padding: [50, 50] });
     }
 
-    // Configuración global de fuentes para Chart.js
+    // ----------------------------------------------------
+    // 4. CONFIGURACIÓN DE GRÁFICAS Y ESTILOS
+    // ----------------------------------------------------
     Chart.defaults.font.family = "'Inter', sans-serif";
     Chart.defaults.color = colorText;
 
     function initCharts() {
-      // 1. Diario
+      // GRÁFICO DIARIO (Línea)
       const ctxD = document.getElementById('chart-diario').getContext('2d');
       chartDiario = new Chart(ctxD, {
         type: 'line',
@@ -385,7 +399,7 @@
         }
       });
 
-      // 2. Mensual
+      // GRÁFICO MENSUAL (Barras + Límites Limpios)
       const ctxM = document.getElementById('chart-mensual').getContext('2d');
       chartMensual = new Chart(ctxM, {
         type: 'bar',
@@ -399,7 +413,16 @@
           responsive: true, maintainAspectRatio: false, layout: { padding: { bottom: 10 } },
           scales: { 
             y: { min: 35, max: 85, grid: { color: colorGrid, drawBorder: false }, ticks: { color: 'rgba(234, 221, 207, 0.6)', padding: 8 } }, 
-            x: { grid: { display:false }, ticks: { color: 'rgba(234, 221, 207, 0.6)', maxRotation: 45, minRotation: 45, autoSkip: true, maxTicksLimit: 15 } } 
+            x: { 
+                grid: { display:false }, 
+                ticks: { 
+                    color: 'rgba(234, 221, 207, 0.6)', 
+                    maxRotation: 45, 
+                    minRotation: 45, 
+                    autoSkip: true, 
+                    maxTicksLimit: 15 
+                } 
+            } 
           }, 
           plugins: { 
             legend: { labels: { color: '#eaddcf', padding: 20, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 12} } },
@@ -408,7 +431,7 @@
         }
       });
 
-      // 3. Anual
+      // GRÁFICO ANUAL (Barras + Límites)
       const ctxA = document.getElementById('chart-anual').getContext('2d');
       chartAnual = new Chart(ctxA, {
         type: 'bar',
@@ -432,6 +455,9 @@
       });
     }
 
+    // ----------------------------------------------------
+    // 5. LÓGICA DE NAVEGACIÓN Y CÁLCULOS
+    // ----------------------------------------------------
     function inicializarFechas() {
       const hoy = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Bogota'});
       document.getElementById('input-fecha').value = hoy;
@@ -464,7 +490,6 @@
       document.getElementById('ficha-desc').innerHTML = `<svg class="w-4 h-4 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> ${nodo.descripcion}`;
       document.getElementById('ficha-foto').src = nodo.foto;
       
-      // Resaltar pin en el mapa
       Object.keys(marcadores).forEach(key => {
          const el = document.getElementById(`pin-${key}`);
          if(el) { el.style.borderWidth = '2px'; el.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)'; }
@@ -479,6 +504,9 @@
       cargarDatosDiaSeleccionado();
     }
 
+    // ----------------------------------------------------
+    // 6. CONSULTAS A LA BASE DE DATOS Y RENDER
+    // ----------------------------------------------------
     async function cargarDatosDiaSeleccionado() {
       const strFecha = document.getElementById('input-fecha').value;
       const inicioMs = new Date(`${strFecha}T00:00:00-05:00`).getTime();
@@ -547,7 +575,7 @@
           if (offline || !ultimo) { pin.className = "marker-pin status-offline"; pin.innerText = "!"; }
           else {
             pin.innerText = Math.round(ultimo.LAeq_1min);
-            if(ultimo.LAeq_1min<=50) pin.className="marker-pin status-ok"; // Corregido a normativa semántica standard
+            if(ultimo.LAeq_1min<=50) pin.className="marker-pin status-ok"; 
             else if(ultimo.LAeq_1min<=65) pin.className="marker-pin status-warning";
             else pin.className="marker-pin status-alert";
           }
@@ -555,6 +583,9 @@
       } catch(e) {}
     }
 
+    // ----------------------------------------------------
+    // 7. FUNCIONES DEL HISTORIAL MENSUAL Y ANUAL
+    // ----------------------------------------------------
     function abrirModalHistorial() {
       document.getElementById('historial-nodo-nombre').innerText = redNodos[nodoActivo].nombre;
       document.getElementById('modal-historial').classList.remove('hidden');
@@ -567,7 +598,6 @@
       document.getElementById('cargando-historial').classList.add('hidden');
     }
 
-    // (Lógicas de historial intactas)
     async function cargarHistorialMensual() {
       const strMes = document.getElementById('input-mes').value;
       const [anio, mes] = strMes.split('-');
@@ -639,6 +669,9 @@
       } catch (e) { }
     }
 
+    // ----------------------------------------------------
+    // 8. UTILIDADES Y AUTENTICACIÓN
+    // ----------------------------------------------------
     function descargarCSV() {
       if(datosDiaActual.length === 0) return alert("No hay datos cargados para este día.");
       let csv = "Timestamp,Fecha_Hora,LAeq_1min\n";
@@ -660,7 +693,7 @@
         document.getElementById('modal-admin').classList.add('hidden');
         const btn = document.getElementById('btn-admin');
         btn.innerText = "Admin (Activo)";
-        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm";
+        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm transition-colors";
       } catch (e) {
         document.getElementById('admin-error').innerText = "Credenciales institucionales inválidas.";
         document.getElementById('admin-error').classList.remove('hidden');
@@ -669,12 +702,18 @@
 
     auth.onAuthStateChanged(user => {
       const btn = document.getElementById('btn-admin');
-      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm"; }
+      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm transition-colors"; }
       else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-lg ml-1 transition-colors"; }
     });
 
+    // ----------------------------------------------------
+    // 9. INICIALIZADOR PRINCIPAL
+    // ----------------------------------------------------
     document.addEventListener("DOMContentLoaded", () => {
-      inicializarFechas(); initMap(); initCharts(); seleccionarEstacion('nodo1');
+      inicializarFechas(); 
+      initMap(); 
+      initCharts(); 
+      seleccionarEstacion('nodo1');
     });
   </script>
 </body>

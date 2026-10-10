@@ -163,7 +163,7 @@
           <label class="text-sm text-slate-400">Seleccionar Mes:</label>
           <input type="month" id="input-mes" class="bg-slate-900 border border-slate-600 text-sm text-white rounded p-1">
         </div>
-        <button onclick="cargarHistorialMensual()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded text-sm text-white font-medium">Consultar Mes</button>
+        <button onclick="actualizarHistorialCompleto()" class="bg-indigo-600 hover:bg-indigo-500 px-4 py-1.5 rounded text-sm text-white font-medium">Consultar Período</button>
         <span id="cargando-historial" class="text-xs text-emerald-400 hidden animate-pulse pt-2">Calculando promedios...</span>
       </div>
 
@@ -173,8 +173,8 @@
           <div class="h-48 relative"><canvas id="chart-mensual"></canvas></div>
         </div>
         <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <h3 class="text-sm font-bold text-slate-200 mb-2">Promedios Anuales (Muestra de ejemplo)</h3>
-          <p class="text-xs text-slate-400 mb-2">Muestra el comportamiento acústico consolidado a lo largo del año.</p>
+          <h3 class="text-sm font-bold text-slate-200 mb-2">Promedios Anuales</h3>
+          <p class="text-xs text-slate-400 mb-2">Muestra el comportamiento acústico consolidado a lo largo del año seleccionado.</p>
           <div class="h-48 relative"><canvas id="chart-anual"></canvas></div>
         </div>
       </div>
@@ -192,13 +192,14 @@
     const auth = firebase.auth();
 
     const redNodos = {
-      nodo1: { id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Residencial", lat: 2.865666, lng: -75.216591, foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg", descripcion: "Vereda Agua-blanca, Neiva" },
+      nodo1: { id: "nodo1", nombre: "F. Villa Garibaldi", sector: "Suburbano", lat: 2.865666, lng: -75.216591, foto: "https://i.ibb.co/Dfr97f3h/IMG-20240412-WA0008.jpg", descripcion: "Vereda Agua-blanca, Neiva" },
       nodo2: { id: "nodo2", nombre: "Parque Santander", sector: "Comercial", lat: 2.927300, lng: -75.281800, foto: "https://images.unsplash.com/photo-1581092335397-9583fe92d232?q=80&w=400", descripcion: "Zona Centro Comercial" }
     };
 
     const normativas = {
       "Residencial": { Ld: 65, Ln: 55 },
-      "Comercial": { Ld: 70, Ln: 60 }
+      "Comercial": { Ld: 70, Ln: 60 },
+      "Suburbano": { Ld: 55, Ln: 45 } // Límites Sector D (Rural/Suburbano)
     };
 
     let mapa, marcadores = {}, chartDiario, chartMensual, chartAnual;
@@ -230,7 +231,6 @@
         options: { responsive: true, maintainAspectRatio: false, scales: { x: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { display: false } } }
       });
 
-      // GRÁFICA MENSUAL (Barras + Líneas Punteadas Normativas)
       const ctxM = document.getElementById('chart-mensual').getContext('2d');
       chartMensual = new Chart(ctxM, {
         type: 'bar',
@@ -245,12 +245,14 @@
 
       const ctxA = document.getElementById('chart-anual').getContext('2d');
       chartAnual = new Chart(ctxA, {
-        type: 'line',
+        type: 'bar',
         data: { labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets: [
-          { label: 'Ld Promedio', data: Array(12).fill(null), borderColor: '#38bdf8' },
-          { label: 'Ln Promedio', data: Array(12).fill(null), borderColor: '#818cf8' }
+          { label: 'Ld Promedio', data: Array(12).fill(null), backgroundColor: '#38bdf8', order: 2 },
+          { label: 'Ln Promedio', data: Array(12).fill(null), backgroundColor: '#818cf8', order: 2 },
+          { label: 'Ref. Norma Ld', data: Array(12).fill(null), type: 'line', borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
+          { label: 'Ref. Norma Ln', data: Array(12).fill(null), type: 'line', borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {color: '#334155'}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 35, max: 85, grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {display:false}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
       });
     }
 
@@ -370,7 +372,13 @@
     function abrirModalHistorial() {
       document.getElementById('historial-nodo-nombre').innerText = redNodos[nodoActivo].nombre;
       document.getElementById('modal-historial').classList.remove('hidden');
-      cargarHistorialMensual();
+      actualizarHistorialCompleto();
+    }
+
+    async function actualizarHistorialCompleto() {
+      document.getElementById('cargando-historial').classList.remove('hidden');
+      await Promise.all([cargarHistorialMensual(), cargarHistorialAnual()]);
+      document.getElementById('cargando-historial').classList.add('hidden');
     }
 
     async function cargarHistorialMensual() {
@@ -379,12 +387,9 @@
       const inicioMs = new Date(anio, mes-1, 1).getTime();
       const finMs = new Date(anio, mes, 0, 23, 59, 59).getTime();
 
-      // Consultar normativas según el sector de la estación activa
       const sector = redNodos[nodoActivo].sector;
       const limLd = normativas[sector].Ld;
       const limLn = normativas[sector].Ln;
-
-      document.getElementById('cargando-historial').classList.remove('hidden');
 
       try {
         const snap = await db.ref(`${nodoActivo}/historial`).orderByChild('timestamp').startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
@@ -410,7 +415,6 @@
           dataLd.push(calcularEquivalente(datosPorDia[i].dia));
           dataLn.push(calcularEquivalente(datosPorDia[i].noche));
           
-          // Llenar arreglos para las líneas rectas horizontales normativas
           arrRefLd.push(limLd);
           arrRefLn.push(limLn);
         }
@@ -418,17 +422,50 @@
         chartMensual.data.labels = labels;
         chartMensual.data.datasets[0].data = dataLd;
         chartMensual.data.datasets[1].data = dataLn;
-        chartMensual.data.datasets[2].data = arrRefLd; // Línea Roja (Ld)
-        chartMensual.data.datasets[3].data = arrRefLn; // Línea Naranja (Ln)
+        chartMensual.data.datasets[2].data = arrRefLd;
+        chartMensual.data.datasets[3].data = arrRefLn;
         chartMensual.update();
 
-        const arrLdAnual = Array(12).fill(null), arrLnAnual = Array(12).fill(null);
-        arrLdAnual[mes-1] = calcularEquivalente(dataLd.filter(x=>x));
-        arrLnAnual[mes-1] = calcularEquivalente(dataLn.filter(x=>x));
-        chartAnual.data.datasets[0].data = arrLdAnual; chartAnual.data.datasets[1].data = arrLnAnual; chartAnual.update();
-
       } catch (e) { console.error("Error historial", e); }
-      document.getElementById('cargando-historial').classList.add('hidden');
+    }
+
+    async function cargarHistorialAnual() {
+      const strMes = document.getElementById('input-mes').value;
+      const anio = strMes.split('-')[0];
+      const inicioMs = new Date(anio, 0, 1).getTime();
+      const finMs = new Date(anio, 11, 31, 23, 59, 59).getTime();
+
+      const sector = redNodos[nodoActivo].sector;
+      const limLd = normativas[sector].Ld;
+      const limLn = normativas[sector].Ln;
+
+      try {
+        const snap = await db.ref(`${nodoActivo}/historial`).orderByChild('timestamp').startAt(Math.floor(inicioMs/1000)).endAt(Math.floor(finMs/1000)).once('value');
+        const raw = snap.val() || {};
+        const datosPorMes = Array.from({length: 12}, () => ({ dia: [], noche: [] }));
+
+        Object.values(raw).forEach(item => {
+          const d = new Date(item.timestamp*1000);
+          const mesIndex = d.getMonth();
+          const minTot = d.getHours()*60 + d.getMinutes();
+          if(minTot >= 421 && minTot <= 1260) datosPorMes[mesIndex].dia.push(Number(item.LAeq_1min));
+          else datosPorMes[mesIndex].noche.push(Number(item.LAeq_1min));
+        });
+
+        const arrLdAnual = Array(12).fill(null), arrLnAnual = Array(12).fill(null);
+        
+        for(let i=0; i<12; i++) {
+          if(datosPorMes[i].dia.length > 0) arrLdAnual[i] = calcularEquivalente(datosPorMes[i].dia);
+          if(datosPorMes[i].noche.length > 0) arrLnAnual[i] = calcularEquivalente(datosPorMes[i].noche);
+        }
+
+        chartAnual.data.datasets[0].data = arrLdAnual; 
+        chartAnual.data.datasets[1].data = arrLnAnual;
+        chartAnual.data.datasets[2].data = Array(12).fill(limLd);
+        chartAnual.data.datasets[3].data = Array(12).fill(limLn);
+        chartAnual.update();
+
+      } catch (e) { console.error("Error historial anual", e); }
     }
 
     function descargarCSV() {

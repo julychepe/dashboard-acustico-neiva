@@ -167,15 +167,19 @@
         <span id="cargando-historial" class="text-xs text-emerald-400 hidden animate-pulse pt-2">Calculando promedios...</span>
       </div>
 
-      <div class="flex-1 overflow-y-auto grid grid-rows-2 gap-6 pb-4">
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+      <!-- Contenedor ajustado a flex-col con más separación -->
+      <div class="flex-1 overflow-y-auto flex flex-col gap-8 pb-4 pr-2">
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
           <h3 class="text-sm font-bold text-slate-200 mb-2">Evolución Diaria (Ld / Ln) con Límites Normativos</h3>
-          <div class="h-48 relative"><canvas id="chart-mensual"></canvas></div>
+          <!-- Altura ampliada -->
+          <div class="h-80 relative w-full"><canvas id="chart-mensual"></canvas></div>
         </div>
-        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-          <h3 class="text-sm font-bold text-slate-200 mb-2">Promedios Anuales</h3>
-          <p class="text-xs text-slate-400 mb-2">Muestra el comportamiento acústico consolidado a lo largo del año seleccionado.</p>
-          <div class="h-48 relative"><canvas id="chart-anual"></canvas></div>
+        
+        <div class="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-lg">
+          <h3 class="text-sm font-bold text-slate-200 mb-1">Promedios Anuales</h3>
+          <p class="text-xs text-slate-400 mb-4">Muestra el comportamiento acústico consolidado a lo largo del año seleccionado.</p>
+          <!-- Altura ampliada -->
+          <div class="h-80 relative w-full"><canvas id="chart-anual"></canvas></div>
         </div>
       </div>
     </div>
@@ -240,7 +244,34 @@
           { label: 'Ref. Norma Ld', data: [], type: 'line', borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
           { label: 'Ref. Norma Ln', data: [], type: 'line', borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 35, max: 85, grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {display:false}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false,
+          layout: { padding: { bottom: 10 } },
+          scales: { 
+            y: { 
+              min: 35, 
+              max: 85, 
+              grid: { color: 'rgba(51, 65, 85, 0.3)', drawBorder: false }, 
+              ticks: { color: '#94a3b8', padding: 8 } 
+            }, 
+            x: { 
+              grid: { display:false }, 
+              ticks: {
+                color: '#94a3b8',
+                maxRotation: 45,
+                minRotation: 45,
+                autoSkip: true,
+                maxTicksLimit: 15
+              } 
+            } 
+          }, 
+          plugins: { 
+            legend: { 
+              labels: { color: '#f8fafc', padding: 20, usePointStyle: true, boxWidth: 8 } 
+            } 
+          } 
+        }
       });
 
       const ctxA = document.getElementById('chart-anual').getContext('2d');
@@ -252,7 +283,28 @@
           { label: 'Ref. Norma Ld', data: Array(12).fill(null), type: 'line', borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
           { label: 'Ref. Norma Ln', data: Array(12).fill(null), type: 'line', borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { min: 35, max: 85, grid: {color: '#334155'}, ticks: {color: '#94a3b8'} }, x: { grid: {display:false}, ticks: {color: '#94a3b8'} } }, plugins: { legend: { labels: { color: 'white' } } } }
+        options: { 
+          responsive: true, 
+          maintainAspectRatio: false, 
+          layout: { padding: { bottom: 10 } },
+          scales: { 
+            y: { 
+              min: 35, 
+              max: 85, 
+              grid: { color: 'rgba(51, 65, 85, 0.3)', drawBorder: false }, 
+              ticks: { color: '#94a3b8', padding: 8 } 
+            }, 
+            x: { 
+              grid: { display:false }, 
+              ticks: { color: '#94a3b8' } 
+            } 
+          }, 
+          plugins: { 
+            legend: { 
+              labels: { color: '#f8fafc', padding: 20, usePointStyle: true, boxWidth: 8 } 
+            } 
+          } 
+        }
       });
     }
 

@@ -20,18 +20,19 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   
-  <!-- Configuración de Identidad Visual (Tailwind) -->
+  <!-- Configuración de Identidad Visual Enriquecida (Tailwind) -->
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            'rio-dark': '#07131c',      /* Fondo principal */
+            'rio-dark': '#07131c',      /* Fondo principal inspirados en el Río Magdalena */
             'rio-surface': '#0e2333',   /* Paneles y tarjetas */
             'rio-border': '#1a3a52',    /* Bordes sutiles */
-            'huila-ocre': '#d97736',    /* Acentos folclor/clima */
+            'rio-cyan': '#06b6d4',      /* Acentos hídricos/ondas sonoras */
+            'huila-ocre': '#d97736',    /* Acentos Tatacoa/Achiras */
             'huila-arena': '#eaddcf',   /* Textos secundarios cálidos */
-            'semaforo-ok': '#10b981',   /* Normativos */
+            'semaforo-ok': '#10b981',   /* Verdor del Valle (Normativos) */
             'semaforo-warn': '#f59e0b',
             'semaforo-alert': '#ef4444',
           },
@@ -40,7 +41,7 @@
             display: ['Outfit', 'sans-serif'],
           },
           backgroundImage: {
-            'topo-pattern': "url('data:image/svg+xml,%3Csvg width=\\'100\\'%20height=\\'100\\'%20viewBox=\\'0 0 100 100\\'%20xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cpath d=\\'M0 50 Q 25 25, 50 50 T 100 50\\' stroke=\\'rgba(234,221,207,0.03)\\' stroke-width=\\'1\\' fill=\\'none\\'%3E%3C/path%3E%3Cpath d=\\'M0 70 Q 35 45, 60 70 T 100 70\\' stroke=\\'rgba(234,221,207,0.03)\\' stroke-width=\\'1\\' fill=\\'none\\'%3E%3C/path%3E%3C/svg%3E')"
+            'topo-pattern': "url('data:image/svg+xml,%3Csvg width=\\'100\\'%20height=\\'100\\'%20viewBox=\\'0 0 100 100\\'%20xmlns=\\'http://www.w3.org/2000/svg\\'%3E%3Cpath d=\\'M0 50 Q 25 25, 50 50 T 100 50\\' stroke=\\'rgba(234,221,207,0.04)\\' stroke-width=\\'1.2\\' fill=\\'none\\'%3E%3C/path%3E%3Cpath d=\\'M0 70 Q 35 45, 60 70 T 100 70\\' stroke=\\'rgba(6,182,212,0.04)\\' stroke-width=\\'1.2\\' fill=\\'none\\'%3E%3C/path%3E%3C/svg%3E')"
           }
         }
       }
@@ -57,9 +58,10 @@
     .leaflet-bar a { background-color: #0e2333 !important; color: #eaddcf !important; border-color: #1a3a52 !important; }
     .leaflet-bar a:hover { background-color: #1a3a52 !important; }
     
+    /* Marcadores inspirados en geometría monolítica abstracta */
     .marker-pin {
       display: flex; align-items: center; justify-content: center;
-      border-radius: 50%; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; color: white;
+      border-radius: 8px; font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 11px; color: white;
       border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.5); transition: transform 0.2s ease;
     }
     .marker-pin:hover { transform: scale(1.15); cursor: pointer; }
@@ -75,16 +77,16 @@
     ::-webkit-scrollbar-thumb:hover { background: #d97736; }
   </style>
 </head>
-<body class="bg-rio-dark text-white font-sans h-screen flex flex-col overflow-hidden relative">
+<body class="bg-rio-dark text-white font-sans min-h-screen flex flex-col overflow-y-auto lg:overflow-hidden relative">
 
   <!-- CABECERA DE IDENTIDAD -->
-  <header class="bg-rio-surface border-b border-rio-border px-6 py-4 flex flex-col sm:flex-row justify-between items-center z-40 shrink-0 bg-topo-pattern">
-    <div class="flex items-center gap-4 mb-3 sm:mb-0">
+  <header class="bg-rio-surface border-b border-rio-border px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center z-40 shrink-0 bg-topo-pattern gap-3 sm:gap-0">
+    <div class="flex items-center gap-4 w-full sm:w-auto">
       <!-- Isologo: Ondas + Río -->
-      <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-rio-dark to-rio-border border border-rio-border shadow-inner flex items-center justify-center p-2 shrink-0">
+      <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-rio-dark to-rio-border border border-rio-border shadow-inner flex items-center justify-center p-2 shrink-0">
         <svg viewBox="0 0 32 32" fill="none" class="w-full h-full">
           <rect x="4" y="16" width="3" height="8" rx="1.5" fill="#eaddcf" />
-          <rect x="10" y="10" width="3" height="14" rx="1.5" fill="#eaddcf" />
+          <rect x="10" y="10" width="3" height="14" rx="1.5" fill="#06b6d4" />
           <rect x="16" y="6" width="3" height="18" rx="1.5" fill="#d97736" />
           <path d="M12 24 C 18 30, 24 18, 30 22" stroke="#d97736" stroke-width="2.5" stroke-linecap="round" fill="none" />
         </svg>
@@ -92,46 +94,46 @@
       <div>
         <h1 class="text-xl sm:text-2xl font-display font-semibold tracking-tight text-white">Observatorio de Ruido Ambiental</h1>
         <div class="flex items-center gap-2 mt-0.5">
-          <svg class="w-3.5 h-3.5 text-huila-ocre" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
-          <p class="text-xs font-medium text-huila-arena/80 tracking-wide">Neiva, Huila · Colombia</p>
+          <svg class="w-3.5 h-3.5 text-rio-cyan" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path></svg>
+          <p class="text-xs font-medium text-huila-arena/80 tracking-wide">Neiva, Huila · Valle del Magdalena</p>
         </div>
       </div>
     </div>
     
-    <div class="flex gap-3 items-center">
-      <button onclick="abrirModalHistorial()" class="text-sm bg-rio-border hover:bg-rio-border/70 text-huila-arena px-4 py-2.5 rounded-lg font-medium transition-colors shadow-sm flex items-center gap-2">
+    <div class="flex gap-2 sm:gap-3 items-center w-full sm:w-auto justify-end">
+      <button onclick="abrirModalHistorial()" class="min-h-[44px] min-w-[44px] text-xs sm:text-sm bg-rio-border hover:bg-rio-border/70 text-huila-arena px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-        Historial Anual
+        Historial
       </button>
-      <button onclick="descargarCSV()" class="text-sm bg-huila-ocre hover:bg-orange-600 text-white px-4 py-2.5 rounded-lg font-medium transition-colors shadow-lg shadow-huila-ocre/20 flex items-center gap-2">
+      <button onclick="descargarCSV()" class="min-h-[44px] min-w-[44px] text-xs sm:text-sm bg-huila-ocre hover:bg-orange-600 text-white px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-huila-ocre/20 flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-        Descargar Día
+        Descargar
       </button>
-      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-lg ml-1 transition-colors">
+      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="min-h-[44px] min-w-[44px] text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors">
         Admin
       </button>
     </div>
   </header>
 
   <!-- LAYOUT PRINCIPAL -->
-  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+  <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
     
-    <!-- PANEL IZQUIERDO: MAPA -->
-    <div class="w-full lg:w-7/12 flex flex-col relative border-r border-rio-border shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
+    <!-- PANEL IZQUIERDO: MAPA (Ajustado para Móvil) -->
+    <div class="w-full lg:w-7/12 h-[45vh] lg:h-full flex flex-col relative border-r border-rio-border shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20 shrink-0">
       <div id="mapa" class="flex-1 w-full bg-[#0a0a0a] z-10"></div>
       
       <!-- LEYENDA INTEGRADA -->
-      <div class="absolute bottom-6 left-6 z-20 bg-rio-surface/90 backdrop-blur-md border border-rio-border p-4 rounded-xl shadow-2xl pointer-events-none">
-        <h4 class="text-[10px] font-bold text-huila-arena/70 mb-3 uppercase tracking-widest font-display">Clasificación Acústica</h4>
-        <div class="flex flex-col gap-2.5 text-xs text-white/90">
-          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-ok shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> ≤ 50 dBA</div>
-          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-warn shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> 50 - 65 dBA</div>
-          <div class="flex items-center gap-3"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-alert shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span> > 65 dBA</div>
-          <div class="flex items-center gap-3 opacity-60"><span class="w-3.5 h-3.5 rounded-full bg-slate-500 border-2 border-dashed border-white/50"></span> Sin conexión</div>
+      <div class="absolute bottom-4 left-4 z-20 bg-rio-surface/90 backdrop-blur-md border border-rio-border p-3 sm:p-4 rounded-2xl shadow-2xl pointer-events-none">
+        <h4 class="text-[10px] font-bold text-rio-cyan mb-2 uppercase tracking-widest font-display">Clasificación Acústica</h4>
+        <div class="flex flex-col gap-2 text-xs text-white/90">
+          <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-ok shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span> ≤ 50 dBA</div>
+          <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-warn shadow-[0_0_8px_rgba(245,158,11,0.5)]"></span> 50 - 65 dBA</div>
+          <div class="flex items-center gap-2.5"><span class="w-3.5 h-3.5 rounded-full bg-semaforo-alert shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span> > 65 dBA</div>
+          <div class="flex items-center gap-2.5 opacity-60"><span class="w-3.5 h-3.5 rounded-full bg-slate-500 border-2 border-dashed border-white/50"></span> Sin conexión</div>
         </div>
       </div>
       
-      <button onclick="centrarMapa()" class="absolute top-4 right-4 z-20 bg-rio-surface/90 backdrop-blur border border-rio-border p-2.5 rounded-lg shadow-lg text-huila-arena hover:text-white transition-colors" title="Ver toda la ciudad">
+      <button onclick="centrarMapa()" class="min-h-[44px] min-w-[44px] absolute top-4 right-4 z-20 bg-rio-surface/90 backdrop-blur border border-rio-border p-2.5 rounded-xl shadow-lg text-huila-arena hover:text-white transition-colors flex items-center justify-center" title="Ver toda la ciudad">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
       </button>
     </div>
@@ -142,28 +144,28 @@
       <!-- FICHA DE ESTACIÓN EDITORIAL -->
       <div class="relative bg-rio-surface border-b border-rio-border">
         <div class="absolute inset-0 z-0">
-          <img id="ficha-foto" src="" class="w-full h-full object-cover opacity-30" alt="Vista de la Estación" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
+          <img id="ficha-foto" src="" class="w-full h-full object-cover opacity-25" alt="Vista de la Estación" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs='">
           <div class="absolute inset-0 bg-gradient-to-t from-rio-surface via-rio-surface/90 to-transparent"></div>
         </div>
         
-        <div class="relative z-10 p-6">
+        <div class="relative z-10 p-5 sm:p-6">
           <div class="flex justify-between items-start mb-6">
             <div>
-              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-rio-dark/60 border border-rio-border text-[10px] font-bold text-huila-ocre uppercase tracking-widest backdrop-blur-sm mb-2" id="ficha-codigo">Seleccione</span>
-              <h2 class="text-3xl font-display font-bold text-white drop-shadow-md leading-tight" id="ficha-nombre">---</h2>
-              <p class="text-sm text-huila-arena/80 mt-1 flex items-center gap-1.5" id="ficha-desc"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> ---</p>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-rio-dark/60 border border-rio-border text-[10px] font-bold text-rio-cyan uppercase tracking-widest backdrop-blur-sm mb-2" id="ficha-codigo">Seleccione</span>
+              <h2 class="text-2xl sm:text-3xl font-display font-bold text-white drop-shadow-md leading-tight" id="ficha-nombre">---</h2>
+              <p class="text-xs sm:text-sm text-huila-arena/80 mt-1 flex items-center gap-1.5" id="ficha-desc"><svg class="w-3.5 h-3.5 text-huila-ocre shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg> ---</p>
             </div>
             <div id="ficha-estado-badge" class="px-3 py-1 rounded-full text-[10px] font-bold bg-rio-border text-huila-arena border border-rio-border/50 shadow-sm">
               Conectando...
             </div>
           </div>
           
-          <div class="flex items-end justify-between bg-rio-dark/40 backdrop-blur-sm border border-rio-border/50 rounded-xl p-4 shadow-inner">
+          <div class="flex items-end justify-between bg-rio-dark/50 backdrop-blur-md border border-rio-border/50 rounded-2xl p-4 shadow-inner">
             <div class="flex flex-col">
               <span class="text-[10px] text-huila-arena/60 uppercase tracking-wider font-semibold mb-1">Nivel Equivalente (L<sub>Aeq,1min</sub>)</span>
               <div class="flex items-baseline gap-1.5">
-                <span class="text-5xl font-display font-black text-white tracking-tighter" id="ficha-ultimo-valor">--.-</span>
-                <span class="text-lg font-bold text-huila-arena/50">dBA</span>
+                <span class="text-4xl sm:text-5xl font-display font-black text-white tracking-tighter" id="ficha-ultimo-valor">--.-</span>
+                <span class="text-lg font-bold text-rio-cyan">dBA</span>
               </div>
             </div>
             <div class="text-right">
@@ -174,67 +176,67 @@
         </div>
       </div>
 
-      <!-- SECCIÓN GRÁFICA -->
-      <div class="px-6 py-4 border-b border-rio-border flex justify-between items-center bg-rio-surface/50">
+      <!-- SECCIÓN GRÁFICA DIARIA -->
+      <div class="px-5 sm:px-6 py-4 border-b border-rio-border flex justify-between items-center bg-rio-surface/50">
         <h3 class="font-display font-semibold text-sm text-huila-arena">Comportamiento Diario</h3>
-        <div class="flex items-center gap-1 bg-rio-dark rounded-lg p-1 border border-rio-border shadow-inner">
-          <button onclick="cambiarDia(-1)" class="p-1.5 hover:bg-rio-surface rounded text-huila-arena transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-transparent text-xs font-medium text-white px-2 py-1 outline-none color-scheme-dark">
-          <button onclick="cambiarDia(1)" class="p-1.5 hover:bg-rio-surface rounded text-huila-arena transition-colors"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+        <div class="flex items-center gap-1 bg-rio-dark rounded-xl p-1 border border-rio-border shadow-inner">
+          <button onclick="cambiarDia(-1)" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-transparent text-xs font-medium text-white px-2 py-1 outline-none color-scheme-dark min-h-[44px] sm:min-h-0">
+          <button onclick="cambiarDia(1)" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
         </div>
       </div>
 
-      <div class="p-6 border-b border-rio-border bg-rio-dark">
+      <div class="p-5 sm:p-6 border-b border-rio-border bg-rio-dark">
         <div class="h-48 w-full relative"><canvas id="chart-diario"></canvas></div>
       </div>
 
       <!-- INDICADORES DIURNOS/NOCTURNOS -->
-      <div class="p-6 bg-rio-surface flex-1">
+      <div class="p-5 sm:p-6 bg-rio-surface flex-1">
         <h3 class="font-display font-semibold text-sm text-huila-arena mb-4">Métricas Consolidadas (Normativa)</h3>
-        <div class="grid grid-cols-2 gap-4">
+        <div class="grid grid-cols-2 gap-3 sm:gap-4">
           <!-- Tarjeta Día -->
-          <div class="bg-gradient-to-br from-rio-dark to-rio-surface border border-rio-border rounded-xl p-4 shadow-lg relative overflow-hidden group">
+          <div class="bg-gradient-to-br from-rio-dark to-rio-surface border border-rio-border rounded-2xl p-4 shadow-lg relative overflow-hidden group">
             <div class="absolute top-0 right-0 w-16 h-16 bg-amber-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
             <div class="flex justify-between items-center mb-3">
               <div class="flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                <span class="text-xs font-bold text-amber-500 uppercase tracking-wide">Periodo Diurno</span>
+                <span class="text-xs font-bold text-amber-500 uppercase tracking-wide">Diurno</span>
               </div>
               <span class="text-[10px] font-mono text-huila-arena/40" id="cov-dia">Cov: --%</span>
             </div>
             <div class="flex items-end gap-1.5 relative z-10">
-              <div class="text-3xl font-display font-black text-white" id="val-ld">--.-</div>
-              <span class="text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
+              <div class="text-2xl sm:text-3xl font-display font-black text-white" id="val-ld">--.-</div>
+              <span class="text-xs sm:text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
             </div>
             <p class="text-[9px] text-huila-arena/40 mt-1 uppercase tracking-widest">07:01 - 21:00</p>
           </div>
           
           <!-- Tarjeta Noche -->
-          <div class="bg-gradient-to-br from-rio-dark to-[#0f1f35] border border-rio-border rounded-xl p-4 shadow-lg relative overflow-hidden group">
+          <div class="bg-gradient-to-br from-rio-dark to-[#0f1f35] border border-rio-border rounded-2xl p-4 shadow-lg relative overflow-hidden group">
             <div class="absolute top-0 right-0 w-16 h-16 bg-indigo-500/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
             <div class="flex justify-between items-center mb-3">
               <div class="flex items-center gap-1.5">
                 <svg class="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
-                <span class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Periodo Nocturno</span>
+                <span class="text-xs font-bold text-indigo-400 uppercase tracking-wide">Nocturno</span>
               </div>
               <span class="text-[10px] font-mono text-huila-arena/40" id="cov-noche">Cov: --%</span>
             </div>
             <div class="flex items-end gap-1.5 relative z-10">
-              <div class="text-3xl font-display font-black text-white" id="val-ln">--.-</div>
-              <span class="text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
+              <div class="text-2xl sm:text-3xl font-display font-black text-white" id="val-ln">--.-</div>
+              <span class="text-xs sm:text-sm font-medium text-huila-arena/50 mb-1">dBA</span>
             </div>
             <p class="text-[9px] text-huila-arena/40 mt-1 uppercase tracking-widest">21:01 - 07:00</p>
           </div>
         </div>
 
-        <!-- CONTEXTO CIUDADANO -->
-        <div class="mt-6 p-4 bg-rio-dark border border-rio-border rounded-xl shadow-inner flex items-start gap-4">
-          <div class="w-8 h-8 rounded-full bg-rio-surface border border-rio-border flex items-center justify-center shrink-0 mt-0.5">
-             <svg class="w-4 h-4 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <!-- CONTEXTO CIUDADANO CON IDENTIDAD -->
+        <div class="mt-6 p-4 bg-rio-dark border border-rio-border rounded-2xl shadow-inner flex items-start gap-3.5">
+          <div class="w-8 h-8 rounded-xl bg-rio-surface border border-rio-border flex items-center justify-center shrink-0 mt-0.5">
+             <svg class="w-4 h-4 text-rio-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 18h12l3-18H3zm3 0V4a2 2 0 012-2h8a2 2 0 012 2v2"></path></svg>
           </div>
           <div>
             <h4 class="text-xs font-bold text-white mb-1 font-display">Identidad y Territorio</h4>
-            <p class="text-xs text-huila-arena/70 leading-relaxed">Conocer el paisaje sonoro de Neiva es el primer paso para comprender nuestra convivencia urbana. Los datos acústicos nos ayudan a proteger la tranquilidad de los barrios y la vitalidad del valle del Magdalena.</p>
+            <p class="text-xs text-huila-arena/70 leading-relaxed">Monitorear el paisaje sonoro de Neiva nos permite balancear el desarrollo socioeconómico con el bienestar ambiental en el valle del Magdalena, resguardando la calidad acústica de nuestras comunas y áreas rurales.</p>
           </div>
         </div>
       </div>
@@ -242,55 +244,53 @@
   </main>
 
   <!-- MODAL: LOGIN ADMIN -->
-  <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-rio-dark/90 backdrop-blur-sm flex items-center justify-center">
-    <div class="bg-rio-surface border border-rio-border p-8 rounded-2xl w-full max-w-sm shadow-2xl relative">
-      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="absolute top-4 right-4 text-huila-arena/50 hover:text-white transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
-      <div class="w-10 h-10 mb-4 bg-rio-dark rounded-lg flex items-center justify-center border border-rio-border"><svg class="w-5 h-5 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
+  <div id="modal-admin" class="fixed inset-0 z-50 hidden bg-rio-dark/90 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-rio-surface border border-rio-border p-6 sm:p-8 rounded-2xl w-[95%] max-w-sm shadow-2xl relative">
+      <button onclick="document.getElementById('modal-admin').classList.add('hidden')" class="min-h-[44px] min-w-[44px] absolute top-3 right-3 text-huila-arena/50 hover:text-white transition-colors flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+      <div class="w-10 h-10 mb-4 bg-rio-dark rounded-xl flex items-center justify-center border border-rio-border"><svg class="w-5 h-5 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg></div>
       <h3 class="text-xl font-display font-bold text-white mb-6">Acceso Administrativo</h3>
-      <input type="email" id="admin-email" placeholder="Correo institucional" class="w-full mb-3 bg-rio-dark border border-rio-border rounded-lg p-2.5 text-sm text-white outline-none focus:border-huila-ocre transition-colors">
-      <input type="password" id="admin-pass" placeholder="Contraseña" class="w-full mb-6 bg-rio-dark border border-rio-border rounded-lg p-2.5 text-sm text-white outline-none focus:border-huila-ocre transition-colors">
-      <button onclick="iniciarSesionAdmin()" class="w-full bg-huila-ocre hover:bg-orange-600 text-white font-bold py-2.5 rounded-lg shadow-lg shadow-huila-ocre/20 transition-colors">Ingresar al Sistema</button>
+      <input type="email" id="admin-email" placeholder="Correo institucional" class="w-full mb-3 bg-rio-dark border border-rio-border rounded-xl p-3 text-sm text-white outline-none focus:border-huila-ocre transition-colors min-h-[44px]">
+      <input type="password" id="admin-pass" placeholder="Contraseña" class="w-full mb-6 bg-rio-dark border border-rio-border rounded-xl p-3 text-sm text-white outline-none focus:border-huila-ocre transition-colors min-h-[44px]">
+      <button onclick="iniciarSesionAdmin()" class="w-full bg-huila-ocre hover:bg-orange-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-huila-ocre/20 transition-colors min-h-[44px]">Ingresar al Sistema</button>
       <p id="admin-error" class="text-semaforo-alert text-xs mt-3 hidden text-center"></p>
     </div>
   </div>
 
-  <!-- MODAL: HISTORIAL INDEPENDIENTE (MES/AÑO) -->
-  <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-rio-dark/95 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="bg-rio-surface border border-rio-border p-6 rounded-2xl w-full max-w-6xl h-[90vh] shadow-2xl flex flex-col relative bg-topo-pattern">
+  <!-- MODAL: HISTORIAL INDEPENDIENTE (ADAPTADO MÓVIL CON SCROLL INTERNO) -->
+  <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-rio-dark/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
+    <div class="bg-rio-surface border border-rio-border p-4 sm:p-6 rounded-2xl w-[95%] max-w-6xl h-[92vh] shadow-2xl flex flex-col relative bg-topo-pattern">
       
-      <div class="flex justify-between items-center mb-6 border-b border-rio-border pb-4">
+      <div class="flex justify-between items-center mb-4 sm:mb-6 border-b border-rio-border pb-3 sm:pb-4 shrink-0">
         <div>
-          <h2 class="text-2xl font-display font-bold text-white">Análisis Acústico</h2>
-          <p class="text-sm text-huila-ocre font-medium mt-1 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> <span id="historial-nodo-nombre"></span></p>
+          <h2 class="text-xl sm:text-2xl font-display font-bold text-white">Análisis Acústico</h2>
+          <p class="text-xs sm:text-sm text-rio-cyan font-medium mt-0.5 flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> <span id="historial-nodo-nombre"></span></p>
         </div>
-        <button onclick="document.getElementById('modal-historial').classList.add('hidden')" class="text-huila-arena/70 hover:text-white bg-rio-dark border border-rio-border px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm">Cerrar Panel</button>
+        <button onclick="document.getElementById('modal-historial').classList.add('hidden')" class="min-h-[44px] min-w-[44px] text-huila-arena/70 hover:text-white bg-rio-dark border border-rio-border px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-medium transition-colors shadow-sm flex items-center justify-center">Cerrar</button>
       </div>
       
-      <div class="flex flex-wrap gap-4 mb-6 bg-rio-dark/50 p-4 rounded-xl border border-rio-border items-center shadow-inner">
-        <label class="text-sm font-medium text-huila-arena">Período de Análisis:</label>
-        <input type="month" id="input-mes" class="bg-rio-surface border border-rio-border text-sm text-white rounded-lg px-3 py-1.5 outline-none focus:border-huila-ocre color-scheme-dark">
-        <button onclick="actualizarHistorialCompleto()" class="bg-rio-border hover:bg-rio-border/70 border border-rio-border px-4 py-1.5 rounded-lg text-sm text-white font-medium transition-colors shadow-sm">Procesar Datos</button>
-        <span id="cargando-historial" class="text-xs text-huila-ocre hidden font-medium flex items-center gap-2"><svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Calculando indicadores...</span>
+      <div class="flex flex-wrap gap-3 mb-4 sm:mb-6 bg-rio-dark/50 p-3 sm:p-4 rounded-xl border border-rio-border items-center shadow-inner shrink-0">
+        <label class="text-xs sm:text-sm font-medium text-huila-arena">Período:</label>
+        <input type="month" id="input-mes" class="bg-rio-surface border border-rio-border text-xs sm:text-sm text-white rounded-xl px-3 py-2 outline-none focus:border-huila-ocre color-scheme-dark min-h-[44px]">
+        <button onclick="actualizarHistorialCompleto()" class="min-h-[44px] bg-rio-border hover:bg-rio-border/70 border border-rio-border px-4 py-2 rounded-xl text-xs sm:text-sm text-white font-medium transition-colors shadow-sm">Procesar Datos</button>
+        <span id="cargando-historial" class="text-xs text-huila-ocre hidden font-medium flex items-center gap-2"><svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...</span>
       </div>
 
-      <!-- SECCIÓN DE GRÁFICAS CON ALTURA ADECUADA PARA EVITAR SUPERPOSICIONES -->
-      <div class="flex-1 overflow-y-auto flex flex-col gap-8 pb-4 pr-2">
-        <div class="bg-rio-dark p-6 rounded-xl border border-rio-border shadow-lg">
-          <div class="mb-4">
-            <h3 class="text-base font-display font-bold text-white">Evolución Diaria (Mes Seleccionado)</h3>
-            <p class="text-xs text-huila-arena/60">Comparativa Ld/Ln contra límites normativos establecidos para el sector.</p>
+      <!-- SECCIÓN DE GRÁFICAS CON SCROLL INTERNO Y ALTURAS ADAPTABLES -->
+      <div class="flex-1 overflow-y-auto flex flex-col gap-6 pr-1 sm:pr-2">
+        <div class="bg-rio-dark p-4 sm:p-6 rounded-2xl border border-rio-border shadow-lg">
+          <div class="mb-3 sm:mb-4">
+            <h3 class="text-sm sm:text-base font-display font-bold text-white">Evolución Diaria (Mes Seleccionado)</h3>
+            <p class="text-[11px] sm:text-xs text-huila-arena/60">Comparativa Ld/Ln contra límites normativos establecidos para el sector.</p>
           </div>
-          <!-- Espacio amplio garantizado -->
-          <div class="h-80 relative w-full"><canvas id="chart-mensual"></canvas></div>
+          <div class="h-64 sm:h-80 relative w-full"><canvas id="chart-mensual"></canvas></div>
         </div>
         
-        <div class="bg-rio-dark p-6 rounded-xl border border-rio-border shadow-lg">
-          <div class="mb-4">
-            <h3 class="text-base font-display font-bold text-white">Consolidado Anual</h3>
-            <p class="text-xs text-huila-arena/60">Promedios mensuales del comportamiento acústico a lo largo del año.</p>
+        <div class="bg-rio-dark p-4 sm:p-6 rounded-2xl border border-rio-border shadow-lg">
+          <div class="mb-3 sm:mb-4">
+            <h3 class="text-sm sm:text-base font-display font-bold text-white">Consolidado Anual</h3>
+            <p class="text-[11px] sm:text-xs text-huila-arena/60">Promedios mensuales del comportamiento acústico a lo largo del año.</p>
           </div>
-          <!-- Espacio amplio garantizado -->
-          <div class="h-80 relative w-full"><canvas id="chart-anual"></canvas></div>
+          <div class="h-64 sm:h-80 relative w-full"><canvas id="chart-anual"></canvas></div>
         </div>
       </div>
     </div>
@@ -321,18 +321,18 @@
     };
 
     // ----------------------------------------------------
-    // 2. PALETA VISUAL PARA GRÁFICOS (CHART.JS)
+    // 2. PALETA VISUAL ENRIQUECIDA PARA GRÁFICOS (CHART.JS)
     // ----------------------------------------------------
-    const colorGraphLine = '#d97736'; // Huila Ocre
-    const colorGraphFill = 'rgba(217, 119, 54, 0.1)';
+    const colorGraphLine = '#06b6d4'; // Cian Río Magdalena
+    const colorGraphFill = 'rgba(6, 182, 212, 0.12)';
     const colorGrid = 'rgba(234, 221, 207, 0.05)';
     const colorText = '#eaddcf';
     
-    // Colores de barras
-    const colorBarLd = '#3b82f6'; // Azul vibrante
-    const colorBarLn = '#6366f1'; // Indigo profundo
-    const colorRefLd = '#ef4444'; // Rojo advertencia
-    const colorRefLn = '#f59e0b'; // Naranja advertencia
+    // Colores de barras e indicadores
+    const colorBarLd = '#3b82f6'; // Azul diurno
+    const colorBarLn = '#6366f1'; // Índigo nocturno
+    const colorRefLd = '#ef4444'; // Umbral advertencia Ld
+    const colorRefLn = '#f59e0b'; // Umbral advertencia Ln
 
     let mapa, marcadores = {}, chartDiario, chartMensual, chartAnual;
     let nodoActivo = "nodo1";
@@ -346,7 +346,6 @@
     function initMap() {
       mapa = L.map('mapa', { zoomControl: true, attributionControl: false });
       
-      // OpenStreetMap estándar usando clase CSS para hacerlo oscuro
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
         maxZoom: 19,
         className: 'map-tiles-dark' 
@@ -370,7 +369,7 @@
     }
 
     function centrarMapa() {
-        if(layerBounds.length > 0) mapa.fitBounds(layerBounds, { padding: [50, 50] });
+        if(layerBounds.length > 0) mapa.fitBounds(layerBounds, { padding: [40, 40] });
     }
 
     // ----------------------------------------------------
@@ -380,16 +379,16 @@
     Chart.defaults.color = colorText;
 
     function initCharts() {
-      // GRÁFICO DIARIO (Línea)
+      // GRÁFICO DIARIO (Línea con soporte para nulos)
       const ctxD = document.getElementById('chart-diario').getContext('2d');
       chartDiario = new Chart(ctxD, {
         type: 'line',
-        data: { labels: [], datasets: [{ label: ' LAeq [dBA]', data: [], borderColor: colorGraphLine, backgroundColor: colorGraphFill, fill: true, borderWidth: 2, pointRadius: 0, tension: 0.1 }] },
+        data: { labels: [], datasets: [{ label: ' LAeq [dBA]', data: [], borderColor: colorGraphLine, backgroundColor: colorGraphFill, fill: true, borderWidth: 2, pointRadius: 0, tension: 0.1, spanGaps: false }] },
         options: { 
           responsive: true, maintainAspectRatio: false, 
           interaction: { mode: 'index', intersect: false },
           scales: { 
-            x: { grid: {color: colorGrid, drawBorder: false}, ticks: {color: 'rgba(234, 221, 207, 0.5)', maxTicksLimit: 12} }, 
+            x: { grid: {color: colorGrid, drawBorder: false}, ticks: {color: 'rgba(234, 221, 207, 0.5)', maxTicksLimit: 10} }, 
             y: { grid: {color: colorGrid, drawBorder: false}, ticks: {color: 'rgba(234, 221, 207, 0.5)'} } 
           }, 
           plugins: { 
@@ -399,13 +398,13 @@
         }
       });
 
-      // GRÁFICO MENSUAL (Barras + Límites Limpios)
+      // GRÁFICO MENSUAL
       const ctxM = document.getElementById('chart-mensual').getContext('2d');
       chartMensual = new Chart(ctxM, {
         type: 'bar',
         data: { labels: [], datasets: [
-          { label: 'Ld (Día)', data: [], backgroundColor: colorBarLd, borderRadius: 2, order: 2 },
-          { label: 'Ln (Noche)', data: [], backgroundColor: colorBarLn, borderRadius: 2, order: 2 },
+          { label: 'Ld (Día)', data: [], backgroundColor: colorBarLd, borderRadius: 4, order: 2 },
+          { label: 'Ln (Noche)', data: [], backgroundColor: colorBarLn, borderRadius: 4, order: 2 },
           { label: 'Ref. Ld', data: [], type: 'line', borderColor: colorRefLd, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
           { label: 'Ref. Ln', data: [], type: 'line', borderColor: colorRefLn, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
@@ -425,19 +424,19 @@
             } 
           }, 
           plugins: { 
-            legend: { labels: { color: '#eaddcf', padding: 20, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 12} } },
+            legend: { labels: { color: '#eaddcf', padding: 16, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 11} } },
             tooltip: { backgroundColor: '#0e2333', titleFont: {family: 'Outfit'}, padding: 12, borderColor: '#1a3a52', borderWidth: 1 }
           } 
         }
       });
 
-      // GRÁFICO ANUAL (Barras + Límites)
+      // GRÁFICO ANUAL
       const ctxA = document.getElementById('chart-anual').getContext('2d');
       chartAnual = new Chart(ctxA, {
         type: 'bar',
         data: { labels: ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'], datasets: [
-          { label: 'Ld Promedio', data: Array(12).fill(null), backgroundColor: colorBarLd, borderRadius: 2, order: 2 },
-          { label: 'Ln Promedio', data: Array(12).fill(null), backgroundColor: colorBarLn, borderRadius: 2, order: 2 },
+          { label: 'Ld Promedio', data: Array(12).fill(null), backgroundColor: colorBarLd, borderRadius: 4, order: 2 },
+          { label: 'Ln Promedio', data: Array(12).fill(null), backgroundColor: colorBarLn, borderRadius: 4, order: 2 },
           { label: 'Ref. Ld', data: Array(12).fill(null), type: 'line', borderColor: colorRefLd, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 },
           { label: 'Ref. Ln', data: Array(12).fill(null), type: 'line', borderColor: colorRefLn, borderDash: [4, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]},
@@ -448,7 +447,7 @@
             x: { grid: { display:false }, ticks: { color: 'rgba(234, 221, 207, 0.6)' } } 
           }, 
           plugins: { 
-            legend: { labels: { color: '#eaddcf', padding: 20, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 12} } },
+            legend: { labels: { color: '#eaddcf', padding: 16, usePointStyle: true, boxWidth: 8, font: {family: 'Outfit', size: 11} } },
             tooltip: { backgroundColor: '#0e2333', titleFont: {family: 'Outfit'}, padding: 12, borderColor: '#1a3a52', borderWidth: 1 }
           } 
         }
@@ -487,7 +486,7 @@
       const nodo = redNodos[id];
       document.getElementById('ficha-codigo').innerText = `Estación: ${nodo.id} | Sector: ${nodo.sector}`;
       document.getElementById('ficha-nombre').innerText = nodo.nombre;
-      document.getElementById('ficha-desc').innerHTML = `<svg class="w-4 h-4 text-huila-ocre" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> ${nodo.descripcion}`;
+      document.getElementById('ficha-desc').innerHTML = `<svg class="w-4 h-4 text-huila-ocre shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path></svg> ${nodo.descripcion}`;
       document.getElementById('ficha-foto').src = nodo.foto;
       
       Object.keys(marcadores).forEach(key => {
@@ -495,7 +494,7 @@
          if(el) { el.style.borderWidth = '2px'; el.style.boxShadow = '0 4px 10px rgba(0,0,0,0.5)'; }
       });
       const pinActivo = document.getElementById(`pin-${id}`);
-      if(pinActivo) { pinActivo.style.borderWidth = '3px'; pinActivo.style.boxShadow = '0 0 0 4px rgba(217, 119, 54, 0.3)'; }
+      if(pinActivo) { pinActivo.style.borderWidth = '3px'; pinActivo.style.boxShadow = '0 0 0 4px rgba(6, 182, 212, 0.4)'; }
       mapa.flyTo([nodo.lat, nodo.lng], 15, { duration: 1.5 });
 
       if(intervaloTiempoReal) clearInterval(intervaloTiempoReal);
@@ -505,7 +504,7 @@
     }
 
     // ----------------------------------------------------
-    // 6. CONSULTAS A LA BASE DE DATOS Y RENDER
+    // 6. CONSULTAS A LA BASE DE DATOS Y RENDER DINÁMICO
     // ----------------------------------------------------
     async function cargarDatosDiaSeleccionado() {
       const strFecha = document.getElementById('input-fecha').value;
@@ -527,29 +526,63 @@
 
     function actualizarUIDiaria(strFecha) {
       const labels = [], datosY = [];
-      let idx = 0;
-      const tBase = new Date(`${strFecha}T00:00:00-05:00`).getTime();
+      const hoyStr = new Date().toLocaleDateString('en-CA', {timeZone: 'America/Bogota'});
+      const esHoy = (strFecha === hoyStr);
       
-      for(let i=0; i<1440; i+=5) {
+      const tBase = new Date(`${strFecha}T00:00:00-05:00`).getTime();
+      let limiteMinutos = 1440;
+
+      // Generación dinámica del eje X si se consulta el día actual
+      if (esHoy) {
+        const ahora = new Date();
+        limiteMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
+      }
+
+      let idx = 0;
+      for (let i = 0; i < limiteMinutos; i += 5) {
         const tMin = tBase + (i * 60000);
         labels.push(new Date(tMin).toLocaleTimeString('es-CO', {hour:'2-digit', minute:'2-digit'}));
-        let found = null;
-        while(idx < datosDiaActual.length && datosDiaActual[idx].timestamp*1000 < tMin + 300000) { found = datosDiaActual[idx].LAeq; idx++; }
-        datosY.push(found);
-      }
-      chartDiario.data.labels = labels; chartDiario.data.datasets[0].data = datosY; chartDiario.update();
+        
+        let valorEncontrado = null;
+        let count = 0;
+        let suma = 0;
 
+        // Búsqueda dentro del intervalo de 5 minutos
+        while (idx < datosDiaActual.length && datosDiaActual[idx].timestamp * 1000 < tMin + 300000) {
+          if (datosDiaActual[idx].timestamp * 1000 >= tMin) {
+            suma += Math.pow(10, datosDiaActual[idx].LAeq / 10);
+            count++;
+          }
+          idx++;
+        }
+
+        if (count > 0) {
+          valorEncontrado = 10 * Math.log10(suma / count);
+        }
+
+        // Si no hay transmisiones en el rango, se inserta null para reflejar la desconexión
+        datosY.push(valorEncontrado);
+      }
+
+      chartDiario.data.labels = labels; 
+      chartDiario.data.datasets[0].data = datosY; 
+      chartDiario.update();
+
+      // Métricas Consolidadas (Ld / Ln)
       let valDia = [], valNoche = [];
       datosDiaActual.forEach(d => {
-        const minTot = d.fechaObj.getHours()*60 + d.fechaObj.getMinutes();
-        if(minTot >= 421 && minTot <= 1260) valDia.push(d.LAeq); else valNoche.push(d.LAeq);
+        const minTot = d.fechaObj.getHours() * 60 + d.fechaObj.getMinutes();
+        if (minTot >= 421 && minTot <= 1260) valDia.push(d.LAeq); 
+        else valNoche.push(d.LAeq);
       });
 
-      const ld = calcularEquivalente(valDia), ln = calcularEquivalente(valNoche);
+      const ld = calcularEquivalente(valDia);
+      const ln = calcularEquivalente(valNoche);
+      
       document.getElementById('val-ld').innerHTML = ld ? `${ld.toFixed(1)}` : '--.-';
-      document.getElementById('cov-dia').innerText = `Cov: ${Math.min((valDia.length/840)*100, 100).toFixed(0)}%`;
+      document.getElementById('cov-dia').innerText = `Cov: ${Math.min((valDia.length / 840) * 100, 100).toFixed(0)}%`;
       document.getElementById('val-ln').innerHTML = ln ? `${ln.toFixed(1)}` : '--.-';
-      document.getElementById('cov-noche').innerText = `Cov: ${Math.min((valNoche.length/600)*100, 100).toFixed(0)}%`;
+      document.getElementById('cov-noche').innerText = `Cov: ${Math.min((valNoche.length / 600) * 100, 100).toFixed(0)}%`;
     }
 
     async function monitorearTiempoReal() {
@@ -693,7 +726,7 @@
         document.getElementById('modal-admin').classList.add('hidden');
         const btn = document.getElementById('btn-admin');
         btn.innerText = "Admin (Activo)";
-        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm transition-colors";
+        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px]";
       } catch (e) {
         document.getElementById('admin-error').innerText = "Credenciales institucionales inválidas.";
         document.getElementById('admin-error').classList.remove('hidden');
@@ -702,8 +735,8 @@
 
     auth.onAuthStateChanged(user => {
       const btn = document.getElementById('btn-admin');
-      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-lg ml-1 font-bold shadow-sm transition-colors"; }
-      else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-lg ml-1 transition-colors"; }
+      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px]"; }
+      else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors min-h-[44px]"; }
     });
 
     // ----------------------------------------------------

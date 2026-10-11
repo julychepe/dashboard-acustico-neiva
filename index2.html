@@ -77,7 +77,7 @@
     ::-webkit-scrollbar-thumb:hover { background: #d97736; }
   </style>
 </head>
-<body class="bg-rio-dark text-white font-sans min-h-screen flex flex-col overflow-y-auto lg:overflow-hidden relative">
+<body class="bg-rio-dark text-white font-sans min-h-screen lg:h-screen flex flex-col overflow-y-auto lg:overflow-hidden relative">
 
   <!-- CABECERA DE IDENTIDAD -->
   <header class="bg-rio-surface border-b border-rio-border px-4 sm:px-6 py-4 flex flex-col sm:flex-row justify-between items-center z-40 shrink-0 bg-topo-pattern gap-3 sm:gap-0">
@@ -101,26 +101,26 @@
     </div>
     
     <div class="flex gap-2 sm:gap-3 items-center w-full sm:w-auto justify-end">
-      <button onclick="abrirModalHistorial()" class="min-h-[44px] min-w-[44px] text-xs sm:text-sm bg-rio-border hover:bg-rio-border/70 text-huila-arena px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
+      <button onclick="abrirModalHistorial()" class="min-h-[44px] sm:min-h-0 text-xs sm:text-sm bg-rio-border hover:bg-rio-border/70 text-huila-arena px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
         Historial
       </button>
-      <button onclick="descargarCSV()" class="min-h-[44px] min-w-[44px] text-xs sm:text-sm bg-huila-ocre hover:bg-orange-600 text-white px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-huila-ocre/20 flex items-center gap-2">
+      <button onclick="descargarCSV()" class="min-h-[44px] sm:min-h-0 text-xs sm:text-sm bg-huila-ocre hover:bg-orange-600 text-white px-3 sm:px-4 py-2.5 rounded-xl font-medium transition-colors shadow-lg shadow-huila-ocre/20 flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
         Descargar
       </button>
-      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="min-h-[44px] min-w-[44px] text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors">
+      <button onclick="mostrarLoginAdmin()" id="btn-admin" class="min-h-[44px] sm:min-h-0 text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors">
         Admin
       </button>
     </div>
   </header>
 
   <!-- LAYOUT PRINCIPAL -->
-  <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
+  <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden min-h-0">
     
-    <!-- PANEL IZQUIERDO: MAPA (Ajustado para Móvil) -->
+    <!-- PANEL IZQUIERDO: MAPA -->
     <div class="w-full lg:w-7/12 h-[45vh] lg:h-full flex flex-col relative border-r border-rio-border shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20 shrink-0">
-      <div id="mapa" class="flex-1 w-full bg-[#0a0a0a] z-10"></div>
+      <div id="mapa" class="w-full h-full bg-[#0a0a0a] z-10"></div>
       
       <!-- LEYENDA INTEGRADA -->
       <div class="absolute bottom-4 left-4 z-20 bg-rio-surface/90 backdrop-blur-md border border-rio-border p-3 sm:p-4 rounded-2xl shadow-2xl pointer-events-none">
@@ -139,7 +139,7 @@
     </div>
 
     <!-- PANEL DERECHO: DATOS Y CONTEXTO -->
-    <div class="w-full lg:w-5/12 bg-rio-dark flex flex-col overflow-y-auto scroll-smooth">
+    <div class="w-full lg:w-5/12 bg-rio-dark flex flex-col overflow-y-auto scroll-smooth min-h-0">
       
       <!-- FICHA DE ESTACIÓN EDITORIAL -->
       <div class="relative bg-rio-surface border-b border-rio-border">
@@ -180,13 +180,13 @@
       <div class="px-5 sm:px-6 py-4 border-b border-rio-border flex justify-between items-center bg-rio-surface/50">
         <h3 class="font-display font-semibold text-sm text-huila-arena">Comportamiento Diario</h3>
         <div class="flex items-center gap-1 bg-rio-dark rounded-xl p-1 border border-rio-border shadow-inner">
-          <button onclick="cambiarDia(-1)" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
-          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-transparent text-xs font-medium text-white px-2 py-1 outline-none color-scheme-dark min-h-[44px] sm:min-h-0">
-          <button onclick="cambiarDia(1)" class="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
+          <button onclick="cambiarDia(-1)" class="p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg></button>
+          <input type="date" id="input-fecha" onchange="cargarDatosDiaSeleccionado()" class="bg-transparent text-xs font-medium text-white px-2 py-1 outline-none color-scheme-dark">
+          <button onclick="cambiarDia(1)" class="p-2 hover:bg-rio-surface rounded-lg text-huila-arena transition-colors flex items-center justify-center"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg></button>
         </div>
       </div>
 
-      <div class="p-5 sm:p-6 border-b border-rio-border bg-rio-dark">
+      <div class="p-5 sm:p-6 border-b border-rio-border bg-rio-dark shrink-0">
         <div class="h-48 w-full relative"><canvas id="chart-diario"></canvas></div>
       </div>
 
@@ -256,7 +256,7 @@
     </div>
   </div>
 
-  <!-- MODAL: HISTORIAL INDEPENDIENTE (ADAPTADO MÓVIL CON SCROLL INTERNO) -->
+  <!-- MODAL: HISTORIAL INDEPENDIENTE -->
   <div id="modal-historial" class="fixed inset-0 z-50 hidden bg-rio-dark/95 backdrop-blur-md flex items-center justify-center p-2 sm:p-4">
     <div class="bg-rio-surface border border-rio-border p-4 sm:p-6 rounded-2xl w-[95%] max-w-6xl h-[92vh] shadow-2xl flex flex-col relative bg-topo-pattern">
       
@@ -275,7 +275,7 @@
         <span id="cargando-historial" class="text-xs text-huila-ocre hidden font-medium flex items-center gap-2"><svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...</span>
       </div>
 
-      <!-- SECCIÓN DE GRÁFICAS CON SCROLL INTERNO Y ALTURAS ADAPTABLES -->
+      <!-- SECCIÓN DE GRÁFICAS CON SCROLL INTERNO -->
       <div class="flex-1 overflow-y-auto flex flex-col gap-6 pr-1 sm:pr-2">
         <div class="bg-rio-dark p-4 sm:p-6 rounded-2xl border border-rio-border shadow-lg">
           <div class="mb-3 sm:mb-4">
@@ -379,7 +379,7 @@
     Chart.defaults.color = colorText;
 
     function initCharts() {
-      // GRÁFICO DIARIO (Línea con soporte para nulos)
+      // GRÁFICO DIARIO
       const ctxD = document.getElementById('chart-diario').getContext('2d');
       chartDiario = new Chart(ctxD, {
         type: 'line',
@@ -532,7 +532,6 @@
       const tBase = new Date(`${strFecha}T00:00:00-05:00`).getTime();
       let limiteMinutos = 1440;
 
-      // Generación dinámica del eje X si se consulta el día actual
       if (esHoy) {
         const ahora = new Date();
         limiteMinutos = (ahora.getHours() * 60) + ahora.getMinutes();
@@ -547,7 +546,6 @@
         let count = 0;
         let suma = 0;
 
-        // Búsqueda dentro del intervalo de 5 minutos
         while (idx < datosDiaActual.length && datosDiaActual[idx].timestamp * 1000 < tMin + 300000) {
           if (datosDiaActual[idx].timestamp * 1000 >= tMin) {
             suma += Math.pow(10, datosDiaActual[idx].LAeq / 10);
@@ -560,7 +558,6 @@
           valorEncontrado = 10 * Math.log10(suma / count);
         }
 
-        // Si no hay transmisiones en el rango, se inserta null para reflejar la desconexión
         datosY.push(valorEncontrado);
       }
 
@@ -726,7 +723,7 @@
         document.getElementById('modal-admin').classList.add('hidden');
         const btn = document.getElementById('btn-admin');
         btn.innerText = "Admin (Activo)";
-        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px]";
+        btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px] sm:min-h-0";
       } catch (e) {
         document.getElementById('admin-error').innerText = "Credenciales institucionales inválidas.";
         document.getElementById('admin-error').classList.remove('hidden');
@@ -735,18 +732,25 @@
 
     auth.onAuthStateChanged(user => {
       const btn = document.getElementById('btn-admin');
-      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px]"; }
-      else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors min-h-[44px]"; }
+      if(user) { btn.innerText = "Admin (Activo)"; btn.className = "text-xs bg-rio-surface text-huila-ocre border border-huila-ocre px-3 py-2 rounded-xl font-bold shadow-sm transition-colors min-h-[44px] sm:min-h-0"; }
+      else { btn.innerText = "Admin"; btn.className = "text-xs text-huila-arena/50 hover:text-white border border-rio-border px-3 py-2 rounded-xl transition-colors min-h-[44px] sm:min-h-0"; }
     });
 
     // ----------------------------------------------------
-    // 9. INICIALIZADOR PRINCIPAL
+    // 9. INICIALIZADOR PRINCIPAL CON REDIMENSIONADO DE MAPA
     // ----------------------------------------------------
     document.addEventListener("DOMContentLoaded", () => {
       inicializarFechas(); 
       initMap(); 
       initCharts(); 
       seleccionarEstacion('nodo1');
+
+      // Forzar al mapa a recalcular su tamaño al cambiar el viewport
+      window.addEventListener('resize', () => {
+        if (mapa) {
+          mapa.invalidateSize();
+        }
+      });
     });
   </script>
 </body>

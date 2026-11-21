@@ -1,6 +1,11 @@
+
 {
   "version": 2,
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index2.html" }
+    {
+      "source": "/((?!_vercel/).*)",
+      "destination": "/index2.html"
+    }
   ]
 }
+

@@ -299,11 +299,15 @@
 
 
   <div id="modal-descarga" class="fixed inset-0 z-50 hidden bg-rio-dark/90 flex items-center justify-center p-4">
-    <div class="bg-rio-surface border border-rio-border rounded-2xl p-6 w-full max-w-md space-y-4">
-      <div class="flex justify-between items-center"><h3 class="font-display text-xl font-bold">Descargar registros CSV</h3><button onclick="document.getElementById('modal-descarga').classList.add('hidden')">Cerrar</button></div>
-      <label class="block text-sm">Estación<select id="descarga-nodo" class="block w-full bg-rio-dark p-3 rounded-xl mt-1"><option value="nodo1">F. Villa Garibaldi</option><option value="nodo2">Parque Santander</option></select></label>
-      <div class="grid grid-cols-2 gap-3"><label class="text-sm">Desde<input type="date" id="descarga-desde" class="block w-full bg-rio-dark p-2 rounded-lg mt-1"></label><label class="text-sm">Hasta<input type="date" id="descarga-hasta" class="block w-full bg-rio-dark p-2 rounded-lg mt-1"></label></div>
-      <button onclick="ejecutarDescarga()" class="w-full bg-huila-ocre text-white rounded-xl p-3 font-bold">Descargar CSV</button><p id="descarga-estado" class="text-xs text-huila-arena"></p>
+    <div class="bg-rio-surface border border-rio-border rounded-2xl p-6 w-full max-w-lg space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center gap-3"><h3 class="font-display text-xl font-bold">Descargar registros CSV</h3><button onclick="document.getElementById('modal-descarga').classList.add('hidden')" class="text-huila-arena hover:text-white">Cerrar ✕</button></div>
+      <label class="block text-sm">Estación<select id="descarga-nodo" class="block w-full bg-rio-dark border border-rio-border p-3 rounded-xl mt-1"><option value="nodo1">F. Villa Garibaldi</option><option value="nodo2">Parque Santander</option></select></label>
+      <label class="block text-sm">Resolución de descarga<select id="descarga-resolucion" class="block w-full bg-rio-dark border border-rio-border p-3 rounded-xl mt-1"><option value="minuto">Por minuto (LAeq, LAmax, LCeq)</option><option value="segundo">Por segundo (LAeq, LCeq)</option></select></label>
+      <div class="grid grid-cols-2 gap-3"><label class="text-sm">Desde (fecha)<input type="date" id="descarga-desde" class="block w-full bg-rio-dark border border-rio-border p-2 rounded-lg mt-1"></label><label class="text-sm">Hasta (fecha)<input type="date" id="descarga-hasta" class="block w-full bg-rio-dark border border-rio-border p-2 rounded-lg mt-1"></label></div>
+      <label class="flex items-center gap-2 text-sm"><input type="checkbox" id="descarga-filtrar-hora" onchange="alternarFiltroHora()" class="accent-cyan-500"> Filtrar por horario</label>
+      <div id="descarga-horario" class="grid grid-cols-2 gap-3 hidden"><label class="text-sm">Hora inicial<input type="time" step="60" id="descarga-hora-desde" value="08:00" class="block w-full bg-rio-dark border border-rio-border p-2 rounded-lg mt-1"></label><label class="text-sm">Hora final<input type="time" step="60" id="descarga-hora-hasta" value="11:00" class="block w-full bg-rio-dark border border-rio-border p-2 rounded-lg mt-1"></label></div>
+      <p class="text-xs text-huila-arena/70">El horario se aplica a cada fecha seleccionada (hora de Colombia). Si la hora final es anterior a la inicial, el intervalo cruza la medianoche. Los segundos se exportan únicamente si existen en las mediciones almacenadas.</p>
+      <button id="btn-ejecutar-descarga" onclick="ejecutarDescarga()" class="w-full bg-huila-ocre hover:bg-orange-600 text-white rounded-xl p-3 font-bold">Descargar CSV</button><p id="descarga-estado" role="status" class="text-xs text-huila-arena"></p>
     </div>
   </div>
   <div id="modal-gestion" class="fixed inset-0 z-50 hidden bg-rio-dark/90 flex items-center justify-center p-4">
@@ -758,16 +762,38 @@
       const filas=registros.map(d=>[d.timestamp,new Date(d.timestamp*1000).toLocaleString('sv-SE',{timeZone:'America/Bogota'}),nodo,d.LAeq??'',d.LAmax??'',d.LCeq??'',d.lat??'',d.lng??''].join(','));
       return '\uFEFF'+encabezado+filas.join('\r\n');
     }
+    // Exporta las lecturas individuales de cada paquete, sin inventar segundos faltantes.
+    function generarCSVSegundos(registros, nodo) {
+      const encabezado = 'Timestamp_1s,Fecha_Hora_Colombia,Estacion,LAeq_1s_dBA,LCeq_1s_dBC,Timestamp_Paquete\r\n';
+      const filas = [];
+      const numero = v => v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? '' : Number(v);
+      registros.forEach(d => {
+        const mediciones = Array.isArray(d.mediciones) ? d.mediciones : Object.values(d.mediciones || {});
+        mediciones.forEach(m => {
+          if (!m || !Number.isFinite(Number(m.t)) || Number(m.t) <= 0) return;
+          const t = Number(m.t);
+          const fecha = new Date(t * 1000).toLocaleString('sv-SE', {timeZone: 'America/Bogota'});
+          filas.push([t, fecha, nodo, numero(m.LA), numero(m.LC), d.timestamp].join(','));
+        });
+      });
+      filas.sort((a,b) => Number(a.split(',')[0]) - Number(b.split(',')[0]));
+      return '\uFEFF' + encabezado + filas.join('\r\n');
+    }
     function guardarArchivo(nombre, contenido) {
       const url=URL.createObjectURL(new Blob([contenido],{type:'text/csv;charset=utf-8'}));
       const a=document.createElement('a');a.href=url;a.download=nombre;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);
     }
     function descargarCSV() { abrirModalDescarga(); }
+    function alternarFiltroHora() {
+      document.getElementById('descarga-horario').classList.toggle('hidden', !document.getElementById('descarga-filtrar-hora').checked);
+    }
     function abrirModalDescarga() {
       document.getElementById('descarga-nodo').value=nodoActivo;
       document.getElementById('descarga-desde').value=document.getElementById('input-fecha').value;
       document.getElementById('descarga-hasta').value=document.getElementById('input-fecha').value;
+      document.getElementById('descarga-estado').textContent='';
       document.getElementById('modal-descarga').classList.remove('hidden');
+      alternarFiltroHora();
     }
     async function consultarRango(nodo,desde,hasta) {
       if(!redNodos[nodo] || !desde || !hasta || desde>hasta) throw Error('Selecciona una estación y un rango válido.');
@@ -775,15 +801,54 @@
       const fin=Math.floor(new Date(`${hasta}T23:59:59-05:00`).getTime()/1000);
       const snap=await db.ref(`${nodo}/historial`).orderByChild('timestamp').startAt(ini).endAt(fin).once('value');
       const num=v=>v===undefined||v===null||v===''||!Number.isFinite(Number(v))?null:Number(v);
-      return Object.entries(snap.val()||{}).map(([key,d])=>({key,timestamp:Number(d.timestamp),LAeq:num(d.LAeq_1min),LAmax:num(d.LAmax_1min),LCeq:num(d.LCeq_1min),lat:d.lat,lng:d.lng})).filter(d=>Number.isFinite(d.timestamp)).sort((a,b)=>a.timestamp-b.timestamp);
+      return Object.entries(snap.val()||{}).map(([key,d])=>({key,timestamp:Number(d.timestamp),LAeq:num(d.LAeq_1min),LAmax:num(d.LAmax_1min),LCeq:num(d.LCeq_1min),lat:d.lat,lng:d.lng,mediciones:d.mediciones||[]})).filter(d=>Number.isFinite(d.timestamp)).sort((a,b)=>a.timestamp-b.timestamp);
+    }
+    function fechaHoraColombia(timestamp) {
+      return new Date(timestamp*1000).toLocaleString('sv-SE',{timeZone:'America/Bogota'});
+    }
+    function cumpleHorario(timestamp, desde, hasta, usarFiltro, horaDesde, horaHasta) {
+      const local=fechaHoraColombia(timestamp);
+      const fecha=local.slice(0,10), hora=local.slice(11,16);
+      if(fecha<desde || fecha>hasta) return false;
+      if(!usarFiltro) return true;
+      // Horario de inicio incluido y final excluido; si cruza medianoche, se aplica por fecha calendario.
+      return horaDesde<horaHasta ? (hora>=horaDesde && hora<horaHasta) : (horaDesde>horaHasta ? (hora>=horaDesde || hora<horaHasta) : true);
     }
     async function ejecutarDescarga() {
-      const nodo=document.getElementById('descarga-nodo').value, desde=document.getElementById('descarga-desde').value,hasta=document.getElementById('descarga-hasta').value;
-      const estado=document.getElementById('descarga-estado');estado.textContent='Consultando registros...';
-      try { const datos=await consultarRango(nodo,desde,hasta);if(!datos.length)throw Error('No hay registros en el período.');
-        const csv=generarCSV(datos,nodo);
-        guardarArchivo(`Ruido_${nodo}_${desde}_${hasta}.csv`,csv);estado.textContent=`Descargados ${datos.length} registros.`;
-      }catch(e){estado.textContent=e.message;}
+      const nodo=document.getElementById('descarga-nodo').value;
+      const desde=document.getElementById('descarga-desde').value;
+      const hasta=document.getElementById('descarga-hasta').value;
+      const resolucion=document.getElementById('descarga-resolucion').value;
+      const usarFiltro=document.getElementById('descarga-filtrar-hora').checked;
+      const horaDesde=document.getElementById('descarga-hora-desde').value;
+      const horaHasta=document.getElementById('descarga-hora-hasta').value;
+      const estado=document.getElementById('descarga-estado');
+      const boton=document.getElementById('btn-ejecutar-descarga');
+      if(!desde || !hasta || desde>hasta) {estado.textContent='Selecciona un rango de fechas válido.';return;}
+      if(usarFiltro && (!horaDesde || !horaHasta)) {estado.textContent='Selecciona ambas horas.';return;}
+      boton.disabled=true;
+      estado.textContent='Consultando registros...';
+      try {
+        const datos=await consultarRango(nodo,desde,hasta);
+        if(!datos.length) throw Error('No hay registros en las fechas seleccionadas.');
+        const filtro=t=>cumpleHorario(t,desde,hasta,usarFiltro,horaDesde,horaHasta);
+        let csv, cantidad;
+        if(resolucion==='minuto') {
+          const seleccion=datos.filter(d=>filtro(d.timestamp));
+          cantidad=seleccion.length;
+          if(!cantidad) throw Error('No hay registros por minuto en ese horario.');
+          csv=generarCSV(seleccion,nodo);
+        } else {
+          const seleccion=datos.map(d=>({ ...d, mediciones:(Array.isArray(d.mediciones)?d.mediciones:Object.values(d.mediciones||{})).filter(m=>m && Number.isFinite(Number(m.t)) && Number(m.t)>0 && filtro(Number(m.t))) }));
+          cantidad=seleccion.reduce((n,d)=>n+d.mediciones.length,0);
+          if(!cantidad) throw Error('No hay mediciones por segundo guardadas en ese horario.');
+          csv=generarCSVSegundos(seleccion,nodo);
+        }
+        const sufijo=usarFiltro?`_${horaDesde.replace(':','')}-${horaHasta.replace(':','')}`:'';
+        guardarArchivo(`Ruido_${resolucion}s_${nodo}_${desde}_${hasta}${sufijo}.csv`,csv);
+        estado.textContent=`Archivo generado: ${cantidad} registros por ${resolucion}.`;
+      } catch(e) {estado.textContent=`Error: ${e.message}`;}
+      finally {boton.disabled=false;}
     }
     let esAdmin=false;
     async function actualizarPermisosAdmin(user) {
@@ -812,8 +877,9 @@
         if(!datos.length)throw Error('No hay registros para eliminar.');
         if(!confirm(`Se encontraron ${datos.length} registros de ${nodo} entre ${desde} y ${hasta}. ¿Deseas continuar con el respaldo?`))return;
         const csv=generarCSV(datos,nodo);
-        guardarArchivo(`RESPALDO_${nodo}_${desde}_${hasta}.csv`,csv);
-        estado.textContent=`Respaldo generado (${datos.length} registros). Comprueba que el archivo se haya guardado.`;
+        guardarArchivo(`RESPALDO_minutos_${nodo}_${desde}_${hasta}.csv`,csv);
+        guardarArchivo(`RESPALDO_segundos_${nodo}_${desde}_${hasta}.csv`,generarCSVSegundos(datos,nodo));
+        estado.textContent=`Respaldos generados (${datos.length} registros). Comprueba que AMBOS archivos CSV se hayan guardado.`;
         if(!confirm('Verifica que descargaste el respaldo CSV. ¿Continuar con la eliminación irreversible?'))return;
         const confirmacion=prompt(`Para eliminar ${datos.length} registros escribe exactamente: ELIMINAR ${nodo}`);
         if(confirmacion!==`ELIMINAR ${nodo}`){estado.textContent='Eliminación cancelada.';return;}
